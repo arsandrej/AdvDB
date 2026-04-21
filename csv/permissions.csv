@@ -1,0 +1,33 @@
+name,description
+inventory.view,View inventory levels and bin locations
+inventory.edit,Edit inventory quantities and statuses
+inventory.delete,Delete inventory records
+inventory.reserve,Reserve inventory for outbound orders
+products.view,View product and variant catalog
+products.edit,Create and update products and variants
+products.delete,Delete products and variants
+warehouses.view,View warehouse structure including sections bins and locations
+warehouses.edit,Create and update warehouses sections and locations
+warehouses.delete,Delete warehouses and their structure
+employees.view,View employee profiles and assignments
+employees.edit,Create and update employee records
+employees.delete,Deactivate or delete employee records
+transactions.view,View inventory transaction history
+transactions.create,Create new inventory transactions (deliveries shipments transfers)
+transactions.approve,Approve pending inventory transactions
+transactions.delete,Void or delete inventory transactions
+shipments.view,View outbound shipment records
+shipments.create,Create new shipment transactions
+shipments.edit,Edit shipment details and status
+deliveries.view,View incoming delivery records
+deliveries.create,Create new delivery transactions
+deliveries.edit,Update delivery details and acceptance status
+roles.view,View roles and their permission assignments
+roles.edit,Create and modify roles
+roles.assign,Assign roles to employees
+permissions.view,View available permissions
+permissions.edit,Create and modify permission definitions
+reports.view,Access operational and inventory reports
+reports.export,Export reports to CSV or PDF
+system.configure,Change system-wide configuration settings
+audit.view,Access audit logs and compliance records
