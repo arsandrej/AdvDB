@@ -119,19 +119,19 @@ JOIN  SECTIONS  sec ON sec.id = l.section_id;
 -- ============================================================
 --  QUICK SANITY CHECKS  (run these after inserting)
 -- ============================================================
--- SELECT COUNT(*) FROM WAREHOUSES;   -- expected:   5
--- SELECT COUNT(*) FROM SECTIONS;     -- expected:  17
--- SELECT COUNT(*) FROM LOCATIONS;    -- expected: 408  (17 × 3 × 4 × 2)
--- SELECT COUNT(*) FROM BINS;         -- expected: 408
+SELECT COUNT(*) FROM WAREHOUSES;   -- expected:   5
+SELECT COUNT(*) FROM SECTIONS;     -- expected:  17
+SELECT COUNT(*) FROM LOCATIONS;    -- expected: 408  (17 × 3 × 4 × 2)
+SELECT COUNT(*) FROM BINS;         -- expected: 408
 
--- Sample: overview per warehouse
--- SELECT w.name, COUNT(DISTINCT s.id) AS sections,
---        COUNT(DISTINCT l.id) AS locations,
---        COUNT(DISTINCT b.id) AS bins,
---        SUM(b.capacity)      AS total_capacity
--- FROM   WAREHOUSES w
--- JOIN   SECTIONS   s ON s.warehouse_id = w.id
--- JOIN   LOCATIONS  l ON l.section_id   = s.id
--- JOIN   BINS       b ON b.location_id  = l.id
--- GROUP BY w.name
--- ORDER BY w.name;
+--Sample: overview per warehouse
+SELECT w.name, COUNT(DISTINCT s.id) AS sections,
+       COUNT(DISTINCT l.id) AS locations,
+       COUNT(DISTINCT b.id) AS bins,
+       SUM(b.capacity)      AS total_capacity
+FROM   WAREHOUSES w
+JOIN   SECTIONS   s ON s.warehouse_id = w.id
+JOIN   LOCATIONS  l ON l.section_id   = s.id
+JOIN   BINS       b ON b.location_id  = l.id
+GROUP BY w.name
+ORDER BY w.name;

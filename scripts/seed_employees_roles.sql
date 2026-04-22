@@ -2,7 +2,7 @@
 -- SEED SCRIPT: employees, roles, permissions, permissions_roles, roles_employees
 -- =============================================================================
 
-\set csv_dir '../csv'
+\set csv_dir 'C:AdvDB/csv'
 
 BEGIN;
 
@@ -38,7 +38,6 @@ COPY stg_job_titles  FROM '/csv/job_titles.csv'    CSV HEADER;
 COPY stg_roles       FROM '/csv/roles.csv'         CSV HEADER;
 COPY stg_permissions FROM '/csv/permissions.csv'   CSV HEADER;
 
-
 -- ---------------------------------------------------------------------------
 -- 3. ROLES
 -- ---------------------------------------------------------------------------
@@ -47,6 +46,7 @@ INSERT INTO ROLES (name, description)
 SELECT name, description
 FROM   stg_roles
 ON CONFLICT (name) DO NOTHING;
+
 
 -- ---------------------------------------------------------------------------
 -- 4. PERMISSIONS
