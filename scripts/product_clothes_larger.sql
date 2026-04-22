@@ -1,8 +1,4 @@
--- ============================================================================
--- 最终完整修复版：服装仓库数据生成脚本（精确 10000 个变体，SKU 绝对唯一）
--- ============================================================================
 
--- 清空现有数据
 TRUNCATE TABLE VARIANT_ATTRIBUTES CASCADE;
 TRUNCATE TABLE ATTRIBUTE_VALUES CASCADE;
 TRUNCATE TABLE ATTRIBUTES CASCADE;
@@ -13,7 +9,6 @@ TRUNCATE TABLE PRODUCTS CASCADE;
 TRUNCATE TABLE CATEGORIES CASCADE;
 TRUNCATE TABLE BRANDS CASCADE;
 
--- 重置序列
 ALTER SEQUENCE brands_id_seq RESTART WITH 1;
 ALTER SEQUENCE products_id_seq RESTART WITH 1;
 ALTER SEQUENCE product_variants_id_seq RESTART WITH 1;
@@ -23,7 +18,6 @@ ALTER SEQUENCE attributes_id_seq RESTART WITH 1;
 ALTER SEQUENCE attribute_values_id_seq RESTART WITH 1;
 
 -- ============================================================================
--- 1. 品牌
 -- ============================================================================
 INSERT INTO BRANDS (name) VALUES
     ('Nike'), ('Adidas'), ('Puma'), ('Under Armour'), ('New Balance'),
@@ -35,7 +29,6 @@ INSERT INTO BRANDS (name) VALUES
     ('Swarovski'), ('Pandora'), ('Tiffany & Co.'), ('Fossil'), ('Casio');
 
 -- ============================================================================
--- 2. 分类
 -- ============================================================================
 INSERT INTO CATEGORIES (name, parent_id) VALUES
     ('Women''s Clothing', NULL), ('Men''s Clothing', NULL), ('Kids'' Clothing', NULL), ('Footwear', NULL), ('Jewelry', NULL);
@@ -54,7 +47,6 @@ INSERT INTO CATEGORIES (name, parent_id) VALUES
     ('Ankle Boots', 20), ('Chelsea Boots', 20), ('Hiking Boots', 20);
 
 -- ============================================================================
--- 3. 产品
 -- ============================================================================
 WITH sample_names (base_name, description) AS (
     VALUES
@@ -119,7 +111,6 @@ INSERT INTO PRODUCTS (name, description)
 SELECT base_name, description FROM sample_names CROSS JOIN generate_series(1, 10);
 
 -- ============================================================================
--- 4. 属性
 -- ============================================================================
 INSERT INTO ATTRIBUTES (name, data_type, unit, is_variant_attribute) VALUES
     ('Size', 'string', NULL, true), ('Color', 'string', NULL, true),
@@ -130,7 +121,6 @@ INSERT INTO ATTRIBUTES (name, data_type, unit, is_variant_attribute) VALUES
     ('Metal Type', 'string', NULL, false), ('Gemstone', 'string', NULL, false);
 
 -- ============================================================================
--- 5. 属性值
 -- ============================================================================
 INSERT INTO ATTRIBUTE_VALUES (attribute_id, value) VALUES
     (1, 'XS'),(1, 'S'),(1, 'M'),(1, 'L'),(1, 'XL'),(1, 'XXL'),(1, '2XL'),(1, '3XL'),(1, '4XL'),(1, '5XL'),
@@ -161,7 +151,6 @@ INSERT INTO ATTRIBUTE_VALUES (attribute_id, value) VALUES
     (12, 'Emerald'),(12, 'Ruby'),(12, 'Amethyst'),(12, 'Topaz'),(12, 'None');
 
 -- ============================================================================
--- 6. 产品分类
 -- ============================================================================
 INSERT INTO PRODUCT_CATEGORIES (product_id, category_id)
 SELECT p.id, COALESCE(
@@ -184,7 +173,7 @@ SELECT p.id, COALESCE(
 ON CONFLICT (product_id, category_id) DO NOTHING;
 
 -- ============================================================================
--- 7. 产品变体（修复 SKU 重复）
+
 -- ============================================================================
 WITH
 color_subset AS (
@@ -250,7 +239,6 @@ FROM variant_combinations;
 UPDATE PRODUCT_VARIANTS SET status = CASE WHEN RANDOM() < 0.05 THEN 'OUT_OF_STOCK' WHEN RANDOM() < 0.02 THEN 'DISCONTINUED' ELSE status END;
 
 -- ============================================================================
--- 8. 产品图片
 -- ============================================================================
 INSERT INTO PRODUCT_IMAGES (url, position, product_variants_id)
 SELECT 'https://picsum.photos/seed/' || pv.id || pos.seq || '/400/400', pos.seq, pv.id
@@ -259,7 +247,6 @@ WHERE pv.id % 3 = 0
 ON CONFLICT (product_variants_id, position) DO NOTHING;
 
 -- ============================================================================
--- 9. 变体属性关联
 -- ============================================================================
 WITH size_attr AS (SELECT id FROM ATTRIBUTE_VALUES WHERE attribute_id = 1)
 INSERT INTO VARIANT_ATTRIBUTES (product_variant_id, attribute_value_id, attribute_id)
@@ -274,20 +261,18 @@ FROM PRODUCT_VARIANTS pv
 ON CONFLICT (product_variant_id, attribute_value_id, attribute_id) DO NOTHING;
 
 -- ============================================================================
--- 10. 统计
 -- ============================================================================
-DO $$
-BEGIN
-    RAISE NOTICE '========================================';
-    RAISE NOTICE '数据生成完成！统计信息：';
-    RAISE NOTICE 'BRANDS: %', (SELECT COUNT(*) FROM BRANDS);
-    RAISE NOTICE 'CATEGORIES: %', (SELECT COUNT(*) FROM CATEGORIES);
-    RAISE NOTICE 'PRODUCTS: %', (SELECT COUNT(*) FROM PRODUCTS);
-    RAISE NOTICE 'PRODUCT_VARIANTS: %', (SELECT COUNT(*) FROM PRODUCT_VARIANTS);
-    RAISE NOTICE 'PRODUCT_IMAGES: %', (SELECT COUNT(*) FROM PRODUCT_IMAGES);
-    RAISE NOTICE 'ATTRIBUTES: %', (SELECT COUNT(*) FROM ATTRIBUTES);
-    RAISE NOTICE 'ATTRIBUTE_VALUES: %', (SELECT COUNT(*) FROM ATTRIBUTE_VALUES);
-    RAISE NOTICE 'VARIANT_ATTRIBUTES: %', (SELECT COUNT(*) FROM VARIANT_ATTRIBUTES);
-    RAISE NOTICE 'PRODUCT_CATEGORIES: %', (SELECT COUNT(*) FROM PRODUCT_CATEGORIES);
-    RAISE NOTICE '========================================';
-END $$;
+-- DO $$
+-- BEGIN
+--     RAISE NOTICE '========================================';
+--     RAISE NOTICE 'BRANDS: %', (SELECT COUNT(*) FROM BRANDS);
+--     RAISE NOTICE 'CATEGORIES: %', (SELECT COUNT(*) FROM CATEGORIES);
+--     RAISE NOTICE 'PRODUCTS: %', (SELECT COUNT(*) FROM PRODUCTS);
+--     RAISE NOTICE 'PRODUCT_VARIANTS: %', (SELECT COUNT(*) FROM PRODUCT_VARIANTS);
+--     RAISE NOTICE 'PRODUCT_IMAGES: %', (SELECT COUNT(*) FROM PRODUCT_IMAGES);
+--     RAISE NOTICE 'ATTRIBUTES: %', (SELECT COUNT(*) FROM ATTRIBUTES);
+--     RAISE NOTICE 'ATTRIBUTE_VALUES: %', (SELECT COUNT(*) FROM ATTRIBUTE_VALUES);
+--     RAISE NOTICE 'VARIANT_ATTRIBUTES: %', (SELECT COUNT(*) FROM VARIANT_ATTRIBUTES);
+--     RAISE NOTICE 'PRODUCT_CATEGORIES: %', (SELECT COUNT(*) FROM PRODUCT_CATEGORIES);
+--     RAISE NOTICE '========================================';
+-- END $$;

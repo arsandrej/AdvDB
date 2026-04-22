@@ -1,15 +1,3 @@
--- ============================================================
---  WAREHOUSE INVENTORY — CLOTHING SEED DATA
---  PostgreSQL
---  Tables: BRANDS, CATEGORIES, ATTRIBUTES, ATTRIBUTE_VALUES,
---          PRODUCTS, PRODUCT_CATEGORIES, PRODUCT_VARIANTS,
---          PRODUCT_IMAGES, VARIANT_ATTRIBUTES
---
---  Summary:
---    6 brands · 14 categories (3-level) · 4 attributes · 30 attribute values
---    10 products · 12 product-category links · 23 variants
---    46 product images · 92 variant attributes
--- ============================================================
 
 BEGIN;
 

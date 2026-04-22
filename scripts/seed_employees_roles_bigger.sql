@@ -1,16 +1,3 @@
--- =============================================================================
--- SEED SCRIPT: employees, roles, permissions, permissions_roles, roles_employees
--- =============================================================================
--- Prerequisites — place these CSV files in the same directory:
---   first_names.csv  |  last_names.csv  |  job_titles.csv
---   roles.csv        |  permissions.csv
---
--- Run with:
---   psql -U <user> -d <database> -f seed_employees_roles.sql
---
--- All logic is set-based — no row-by-row loops.
--- Tweak the LIMIT in section 6 to control exact employee count (min 2000).
--- =============================================================================
 
 BEGIN;
 
@@ -197,10 +184,6 @@ ON CONFLICT DO NOTHING;
 
 -- ---------------------------------------------------------------------------
 -- 6. EMPLOYEES
---    Cross join first × last names → assign a unique row number, then cycle
---    through job titles and derive all other columns from that number.
---    The LIMIT controls the exact employee count — raise it freely, the
---    cross join supports up to ~15 000 unique name combinations.
 -- ---------------------------------------------------------------------------
 
 INSERT INTO EMPLOYEES (
@@ -217,7 +200,7 @@ INSERT INTO EMPLOYEES (
 )
 WITH
 
--- ① Cross join produces all unique first × last combinations
+-- Cross join produces all unique first × last combinations
 all_combinations AS (
     SELECT
         f.first_name,
@@ -227,14 +210,13 @@ all_combinations AS (
     CROSS JOIN stg_last_names l
 ),
 
--- ② Keep only as many rows as we want employees
 limited AS (
     SELECT * FROM all_combinations
     ORDER BY rn
-    LIMIT 2000            -- ← change this number to produce more employees
+    LIMIT 2000            --produce more employees
 ),
 
--- ③ Number every job row so we can cycle through them
+-- Number every job row so we can cycle through them
 numbered_jobs AS (
     SELECT
         job_title,
@@ -245,7 +227,7 @@ numbered_jobs AS (
 
 job_count AS (SELECT COUNT(*) AS cnt FROM stg_job_titles),
 
--- ④ Pair each employee with a job via modular arithmetic
+-- Pair each employee with a job via modular arithmetic
 with_jobs AS (
     SELECT
         e.first_name,
@@ -258,7 +240,7 @@ with_jobs AS (
        ON j.jrn = ((e.rn - 1) % (SELECT cnt FROM job_count)) + 1
 ),
 
--- ⑤ Derive timestamps: hire dates spread evenly across last 10 years
+-- Derive timestamps: hire dates spread evenly across last 10 years
 with_dates AS (
     SELECT
         *,
@@ -274,7 +256,7 @@ with_dates AS (
     FROM with_jobs
 )
 
--- ⑥ Final SELECT — manager_id resolved by employee_number of senior staff
+-- Final SELECT — manager_id resolved by employee_number of senior staff
 SELECT
     'EMP-' || LPAD(rn::text, 7, '0')                                  AS employee_number,
     first_name,

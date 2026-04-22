@@ -1,23 +1,6 @@
 -- =============================================================================
 -- UPDATE manager_id BASED ON ROLE HIERARCHY
 -- =============================================================================
---
--- Hierarchy:
---
---   LEVEL 1  Admin, Warehouse Manager              → manager_id = NULL (roots)
---   LEVEL 2  Operations Supervisor                 → reports to Warehouse Manager
---   LEVEL 3  Inventory Analyst, HR Coordinator,    → reports to Operations Supervisor
---            Procurement Officer, IT Support,
---            Auditor, Quality Inspector
---   LEVEL 4  Receiving Clerk      → reports to Inventory Analyst  (domain match)
---            Shipping Coordinator → reports to Procurement Officer (domain match)
---            Forklift Operator    → reports to Operations Supervisor
---
--- Distribution: employees are spread evenly across available managers using
--- MOD arithmetic on their row number within each group — deterministic,
--- no random(), no loops.
---
--- =============================================================================
 
 BEGIN;
 

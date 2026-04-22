@@ -1,6 +1,3 @@
--- =============================================================================
--- SEED SCRIPT: employees, roles, permissions, permissions_roles, roles_employees
--- =============================================================================
 
 \set csv_dir 'C:AdvDB/csv'
 
