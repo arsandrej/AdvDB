@@ -166,11 +166,11 @@ CREATE TABLE INVENTORY (
 
 CREATE TABLE EMPLOYEES (
     id BIGSERIAL PRIMARY KEY,
-    employee_number VARCHAR(12) NOT NULL,
+    employee_number VARCHAR(63) NOT NULL,
     first_name VARCHAR(63) NOT NULL,
     last_name VARCHAR(63) NOT NULL,
     email VARCHAR(63) NOT NULL,
-    phone VARCHAR(12),
+    phone VARCHAR(63),
     job_title VARCHAR(63) NOT NULL,
     employment_status VARCHAR(63) NOT NULL,
     hired_at TIMESTAMP NOT NULL,

@@ -1,16 +1,6 @@
 -- =============================================================================
 -- SEED SCRIPT: employees, roles, permissions, permissions_roles, roles_employees
 -- =============================================================================
--- Prerequisites:
---   Place the four csv files next to this script (or adjust paths below):
---     employees_raw.csv  |  job_titles.csv  |  roles.csv  |  permissions.csv
---
--- Run with:
---   psql -U <user> -d <database> -f seed_employees_roles.sql
---
--- All logic is set-based — no row-by-row loops.
--- Adjust the path prefix in the COPY commands if your files live elsewhere.
--- =============================================================================
 
 \set csv_dir '../csv'
 
@@ -43,10 +33,10 @@ CREATE TEMP TABLE stg_permissions (
 -- ---------------------------------------------------------------------------
 -- 2. LOAD CSVs INTO STAGING TABLES
 -- ---------------------------------------------------------------------------
-\copy stg_names        FROM :'csv_dir'/employees_raw.csv CSV HEADER
-\copy stg_job_titles   FROM :'csv_dir'/job_titles.csv    CSV HEADER
-\copy stg_roles        FROM :'csv_dir'/roles.csv         CSV HEADER
-\copy stg_permissions  FROM :'csv_dir'/permissions.csv   CSV HEADER
+COPY stg_names       FROM '/csv/employees_raw.csv' CSV HEADER;
+COPY stg_job_titles  FROM '/csv/job_titles.csv'    CSV HEADER;
+COPY stg_roles       FROM '/csv/roles.csv'         CSV HEADER;
+COPY stg_permissions FROM '/csv/permissions.csv'   CSV HEADER;
 
 
 -- ---------------------------------------------------------------------------

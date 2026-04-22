@@ -1,6 +1,6 @@
 name,description
 Admin,Full system access including user management and configuration
-Warehouse Manager,Can manage warehouse operations, staff assignments, and inventory adjustments
+Warehouse Manager,Can manage warehouse operations staff assignments and inventory adjustments
 Inventory Analyst,Read and write access to inventory records and reports
 Receiving Clerk,Can process incoming deliveries and update stock levels
 Shipping Coordinator,Can create and manage outbound shipments and dispatch records
@@ -9,5 +9,5 @@ Quality Inspector,Can flag and quarantine inventory items and log inspection res
 Procurement Officer,Can create purchase orders and manage supplier records
 HR Coordinator,Access to employee records and warehouse assignment management
 Auditor,Read-only access to all inventory and transaction records for compliance
-IT Support,Can manage system users, roles, and integration settings
+IT Support,Can manage system users roles and integration settings
 Operations Supervisor,Can oversee daily operations and approve inventory transactions
