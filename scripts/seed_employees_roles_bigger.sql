@@ -212,7 +212,7 @@ all_combinations AS (
 
 limited AS (
     SELECT * FROM all_combinations
-    ORDER BY rn
+    ORDER BY RANDOM()
     LIMIT 2000            --produce more employees
 ),
 
