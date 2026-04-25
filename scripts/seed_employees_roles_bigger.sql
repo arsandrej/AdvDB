@@ -288,90 +288,119 @@ ORDER BY rn;
 --      • The first 20 employees (senior staff) also get Warehouse Manager
 -- ---------------------------------------------------------------------------
 
+-- ---------------------------------------------------------------------------
+-- 7. ROLES_EMPLOYEES
+--    Improved role distribution:
+--      • First 3 employees → Admin
+--      • Realistic job → role mapping
+--      • Every 7th employee → Auditor (if not already)
+-- ---------------------------------------------------------------------------
+
 INSERT INTO ROLES_EMPLOYEES (roles_id, employees_id)
 
 WITH
 
-emp_numbered AS (
-    SELECT
-        id,
-        job_title,
-        ROW_NUMBER() OVER (ORDER BY id) AS rn
-    FROM EMPLOYEES
-),
+    emp_numbered AS (
+        SELECT
+            id,
+            job_title,
+            ROW_NUMBER() OVER (ORDER BY id) AS rn
+        FROM EMPLOYEES
+    ),
 
--- Primary role derived from job title
-primary_role AS (
-    SELECT
-        e.id   AS employee_id,
-        r.id   AS role_id,
-        r.name AS role_name
-    FROM emp_numbered e
-    JOIN ROLES r ON r.name = CASE e.job_title
-        WHEN 'Warehouse Manager'           THEN 'Warehouse Manager'
-        WHEN 'Assistant Warehouse Manager' THEN 'Warehouse Manager'
-        WHEN 'Operations Supervisor'       THEN 'Operations Supervisor'
-        WHEN 'Warehouse Supervisor'        THEN 'Operations Supervisor'
-        WHEN 'Inventory Specialist'        THEN 'Inventory Analyst'
-        WHEN 'Inventory Control Manager'   THEN 'Inventory Analyst'
-        WHEN 'Senior Inventory Analyst'    THEN 'Inventory Analyst'
-        WHEN 'Data Entry Clerk'            THEN 'Inventory Analyst'
-        WHEN 'Receiving Clerk'             THEN 'Receiving Clerk'
-        WHEN 'Returns Processor'           THEN 'Receiving Clerk'
-        WHEN 'Shipping Coordinator'        THEN 'Shipping Coordinator'
-        WHEN 'Dispatch Coordinator'        THEN 'Shipping Coordinator'
-        WHEN 'Packing Specialist'          THEN 'Shipping Coordinator'
-        WHEN 'Fleet Coordinator'           THEN 'Shipping Coordinator'
-        WHEN 'Forklift Operator'           THEN 'Forklift Operator'
-        WHEN 'Loading Dock Supervisor'     THEN 'Forklift Operator'
-        WHEN 'Stock Associate'             THEN 'Forklift Operator'
-        WHEN 'Warehouse Associate'         THEN 'Forklift Operator'
-        WHEN 'Quality Control Inspector'   THEN 'Quality Inspector'
-        WHEN 'Logistics Coordinator'       THEN 'Operations Supervisor'
-        WHEN 'Procurement Officer'         THEN 'Procurement Officer'
-        WHEN 'Supply Chain Analyst'        THEN 'Procurement Officer'
-        WHEN 'HR Coordinator'              THEN 'HR Coordinator'
-        WHEN 'IT Support Technician'       THEN 'IT Support'
-        WHEN 'Safety Officer'              THEN 'Auditor'
-        ELSE 'Inventory Analyst'
-    END
-),
+-- Primary role derived from job title (clean hierarchy)
+    primary_role AS (
+        SELECT
+            e.id   AS employee_id,
+            r.id   AS role_id,
+            r.name AS role_name
+        FROM emp_numbered e
+                 JOIN ROLES r ON r.name = CASE e.job_title
 
--- Every 7th employee also gets Auditor
-auditor_extra AS (
-    SELECT
-        e.id   AS employee_id,
-        r.id   AS role_id,
-        r.name AS role_name
-    FROM  emp_numbered e
-    JOIN  ROLES r ON r.name = 'Auditor'
-    JOIN  primary_role pr ON pr.employee_id = e.id AND pr.role_name <> 'Auditor'
-    WHERE e.rn % 7 = 0
-),
+            -- Top level
+                                              WHEN 'Warehouse Manager'           THEN 'Warehouse Manager'
 
--- First 20 employees (senior staff) also carry Warehouse Manager
-senior_extra AS (
-    SELECT
-        e.id   AS employee_id,
-        r.id   AS role_id,
-        r.name AS role_name
-    FROM  emp_numbered e
-    JOIN  ROLES r ON r.name = 'Warehouse Manager'
-    JOIN  primary_role pr ON pr.employee_id = e.id AND pr.role_name <> 'Warehouse Manager'
-    WHERE e.rn <= 20
-),
+            -- Supervisors (not managers)
+                                              WHEN 'Assistant Warehouse Manager' THEN 'Operations Supervisor'
+                                              WHEN 'Operations Supervisor'       THEN 'Operations Supervisor'
+                                              WHEN 'Warehouse Supervisor'        THEN 'Operations Supervisor'
+                                              WHEN 'Logistics Coordinator'       THEN 'Operations Supervisor'
 
-all_assignments AS (
-    SELECT employee_id, role_id FROM primary_role
-    UNION
-    SELECT employee_id, role_id FROM auditor_extra
-    UNION
-    SELECT employee_id, role_id FROM senior_extra
-)
+            -- Inventory / data
+                                              WHEN 'Inventory Specialist'        THEN 'Inventory Analyst'
+                                              WHEN 'Inventory Control Manager'   THEN 'Inventory Analyst'
+                                              WHEN 'Senior Inventory Analyst'    THEN 'Inventory Analyst'
+                                              WHEN 'Data Entry Clerk'            THEN 'Inventory Analyst'
+
+            -- Receiving
+                                              WHEN 'Receiving Clerk'             THEN 'Receiving Clerk'
+                                              WHEN 'Returns Processor'           THEN 'Receiving Clerk'
+
+            -- Shipping
+                                              WHEN 'Shipping Coordinator'        THEN 'Shipping Coordinator'
+                                              WHEN 'Dispatch Coordinator'        THEN 'Shipping Coordinator'
+                                              WHEN 'Packing Specialist'          THEN 'Shipping Coordinator'
+                                              WHEN 'Fleet Coordinator'           THEN 'Shipping Coordinator'
+
+            -- Floor workers
+                                              WHEN 'Forklift Operator'           THEN 'Forklift Operator'
+                                              WHEN 'Loading Dock Supervisor'     THEN 'Forklift Operator'
+                                              WHEN 'Stock Associate'             THEN 'Forklift Operator'
+                                              WHEN 'Warehouse Associate'         THEN 'Forklift Operator'
+
+            -- Quality
+                                              WHEN 'Quality Control Inspector'   THEN 'Quality Inspector'
+
+            -- Procurement
+                                              WHEN 'Procurement Officer'         THEN 'Procurement Officer'
+                                              WHEN 'Supply Chain Analyst'        THEN 'Procurement Officer'
+
+            -- HR / IT
+                                              WHEN 'HR Coordinator'              THEN 'HR Coordinator'
+                                              WHEN 'IT Support Technician'       THEN 'IT Support'
+
+            -- Special
+                                              WHEN 'Safety Officer'              THEN 'Auditor'
+
+                                              ELSE 'Inventory Analyst'
+            END
+    ),
+
+-- First 3 employees are Admins
+    admin_extra AS (
+        SELECT
+            e.id   AS employee_id,
+            r.id   AS role_id
+        FROM emp_numbered e
+                 JOIN ROLES r ON r.name = 'Admin'
+        WHERE e.rn <= 3
+    ),
+
+-- Every 7th employee also gets Auditor (if not already)
+    auditor_extra AS (
+        SELECT
+            e.id   AS employee_id,
+            r.id   AS role_id
+        FROM emp_numbered e
+                 JOIN ROLES r ON r.name = 'Auditor'
+                 JOIN primary_role pr
+                      ON pr.employee_id = e.id
+                          AND pr.role_name <> 'Auditor'
+        WHERE e.rn % 7 = 0
+    ),
+
+    all_assignments AS (
+        SELECT employee_id, role_id FROM primary_role
+        UNION
+        SELECT employee_id, role_id FROM admin_extra
+        UNION
+        SELECT employee_id, role_id FROM auditor_extra
+    )
 
 SELECT role_id, employee_id
 FROM   all_assignments
 ON CONFLICT DO NOTHING;
+
 
 -- ---------------------------------------------------------------------------
 -- 8. CLEANUP
