@@ -110,10 +110,3 @@ SELECT 'PRODUCTS'            AS tbl, COUNT(*) AS rows FROM PRODUCTS
 UNION ALL
 SELECT 'PRODUCT_CATEGORIES',          COUNT(*)         FROM PRODUCT_CATEGORIES
 ORDER BY tbl;
-
-SELECT p.name AS product, c.name AS category
-FROM PRODUCTS p
-JOIN PRODUCT_CATEGORIES pc ON pc.product_id = p.id
-JOIN CATEGORIES c ON c.id = pc.category_id
-WHERE p.id = (SELECT id FROM PRODUCTS ORDER BY RANDOM() LIMIT 1)
-ORDER BY c.name;
