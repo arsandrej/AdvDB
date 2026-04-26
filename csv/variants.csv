@@ -1,0 +1,153 @@
+category_name,attr1_name,attr1_values,attr2_name,attr2_values,attr3_name,attr3_values
+PCIe 4.0 NVMe SSDs,Storage Capacity,500GB|1TB|2TB|4TB,Interface,PCIe 4.0 x4,Color,Black|Silver
+PCIe 5.0 NVMe SSDs,Storage Capacity,1TB|2TB|4TB,Interface,PCIe 5.0 x4,Color,Black|Silver
+SATA SSDs,Storage Capacity,120GB|240GB|480GB|960GB|1TB|2TB,Interface,SATA III,Color,Black|Silver
+"3.5"" Desktop HDDs",Storage Capacity,1TB|2TB|4TB|8TB|16TB|20TB,Interface,SATA III,,
+"2.5"" Laptop HDDs",Storage Capacity,500GB|1TB|2TB,Interface,SATA III,,
+External Drives,Storage Capacity,500GB|1TB|2TB|4TB,Interface,USB 3.2 Gen 2|USB 3.2 Gen 2x2|Thunderbolt 4,,
+USB Flash Drives,Storage Capacity,32GB|64GB|128GB|256GB|512GB,Interface,USB 3.2 Gen 1|USB 3.2 Gen 2,Color,Black|White|Silver|Red|Blue
+Memory Cards,Storage Capacity,64GB|128GB|256GB|512GB|1TB,Speed,DDR4-3200|DDR4-4800,Color,Black
+DDR5 RAM,RAM Capacity,8GB,Speed,DDR5-4800,Kit Size,1x8GB|2x8GB|4x8GB
+DDR5 RAM,RAM Capacity,8GB,Speed,DDR5-5200,Kit Size,1x8GB|2x8GB|4x8GB
+DDR5 RAM,RAM Capacity,8GB,Speed,DDR5-5600,Kit Size,1x8GB|2x8GB|4x8GB
+DDR5 RAM,RAM Capacity,8GB,Speed,DDR5-6000,Kit Size,1x8GB|2x8GB|4x8GB
+DDR5 RAM,RAM Capacity,8GB,Speed,DDR5-6400,Kit Size,1x8GB|2x8GB|4x8GB
+DDR5 RAM,RAM Capacity,8GB,Speed,DDR5-7200,Kit Size,1x8GB|2x8GB|4x8GB
+DDR5 RAM,RAM Capacity,8GB,Speed,DDR5-8000,Kit Size,1x8GB|2x8GB|4x8GB
+DDR5 RAM,RAM Capacity,16GB,Speed,DDR5-4800,Kit Size,1x16GB|2x16GB|4x16GB
+DDR5 RAM,RAM Capacity,16GB,Speed,DDR5-5200,Kit Size,1x16GB|2x16GB|4x16GB
+DDR5 RAM,RAM Capacity,16GB,Speed,DDR5-5600,Kit Size,1x16GB|2x16GB|4x16GB
+DDR5 RAM,RAM Capacity,16GB,Speed,DDR5-6000,Kit Size,1x16GB|2x16GB|4x16GB
+DDR5 RAM,RAM Capacity,16GB,Speed,DDR5-6400,Kit Size,1x16GB|2x16GB|4x16GB
+DDR5 RAM,RAM Capacity,16GB,Speed,DDR5-7200,Kit Size,1x16GB|2x16GB|4x16GB
+DDR5 RAM,RAM Capacity,16GB,Speed,DDR5-8000,Kit Size,1x16GB|2x16GB|4x16GB
+DDR5 RAM,RAM Capacity,32GB,Speed,DDR5-4800,Kit Size,1x32GB|2x32GB|4x32GB
+DDR5 RAM,RAM Capacity,32GB,Speed,DDR5-5200,Kit Size,1x32GB|2x32GB|4x32GB
+DDR5 RAM,RAM Capacity,32GB,Speed,DDR5-5600,Kit Size,1x32GB|2x32GB|4x32GB
+DDR5 RAM,RAM Capacity,32GB,Speed,DDR5-6000,Kit Size,1x32GB|2x32GB|4x32GB
+DDR5 RAM,RAM Capacity,32GB,Speed,DDR5-6400,Kit Size,1x32GB|2x32GB|4x32GB
+DDR5 RAM,RAM Capacity,32GB,Speed,DDR5-7200,Kit Size,1x32GB|2x32GB|4x32GB
+DDR5 RAM,RAM Capacity,32GB,Speed,DDR5-8000,Kit Size,1x32GB|2x32GB|4x32GB
+DDR5 RAM,RAM Capacity,48GB,Speed,DDR5-4800,Kit Size,2x24GB|2x48GB
+DDR5 RAM,RAM Capacity,48GB,Speed,DDR5-5200,Kit Size,2x24GB|2x48GB
+DDR5 RAM,RAM Capacity,48GB,Speed,DDR5-5600,Kit Size,2x24GB|2x48GB
+DDR5 RAM,RAM Capacity,48GB,Speed,DDR5-6000,Kit Size,2x24GB|2x48GB
+DDR5 RAM,RAM Capacity,48GB,Speed,DDR5-6400,Kit Size,2x24GB|2x48GB
+DDR5 RAM,RAM Capacity,48GB,Speed,DDR5-7200,Kit Size,2x24GB|2x48GB
+DDR5 RAM,RAM Capacity,48GB,Speed,DDR5-8000,Kit Size,2x24GB|2x48GB
+DDR5 RAM,RAM Capacity,64GB,Speed,DDR5-4800,Kit Size,2x32GB|4x16GB
+DDR5 RAM,RAM Capacity,64GB,Speed,DDR5-5200,Kit Size,2x32GB|4x16GB
+DDR5 RAM,RAM Capacity,64GB,Speed,DDR5-5600,Kit Size,2x32GB|4x16GB
+DDR5 RAM,RAM Capacity,64GB,Speed,DDR5-6000,Kit Size,2x32GB|4x16GB
+DDR5 RAM,RAM Capacity,64GB,Speed,DDR5-6400,Kit Size,2x32GB|4x16GB
+DDR5 RAM,RAM Capacity,64GB,Speed,DDR5-7200,Kit Size,2x32GB|4x16GB
+DDR5 RAM,RAM Capacity,64GB,Speed,DDR5-8000,Kit Size,2x32GB|4x16GB
+DDR5 RAM,RAM Capacity,96GB,Speed,DDR5-4800,Kit Size,2x48GB
+DDR5 RAM,RAM Capacity,96GB,Speed,DDR5-5200,Kit Size,2x48GB
+DDR5 RAM,RAM Capacity,96GB,Speed,DDR5-5600,Kit Size,2x48GB
+DDR5 RAM,RAM Capacity,96GB,Speed,DDR5-6000,Kit Size,2x48GB
+DDR5 RAM,RAM Capacity,96GB,Speed,DDR5-6400,Kit Size,2x48GB
+DDR5 RAM,RAM Capacity,96GB,Speed,DDR5-7200,Kit Size,2x48GB
+DDR5 RAM,RAM Capacity,96GB,Speed,DDR5-8000,Kit Size,2x48GB
+DDR5 RAM,RAM Capacity,128GB,Speed,DDR5-4800,Kit Size,2x64GB|4x32GB
+DDR5 RAM,RAM Capacity,128GB,Speed,DDR5-5200,Kit Size,2x64GB|4x32GB
+DDR5 RAM,RAM Capacity,128GB,Speed,DDR5-5600,Kit Size,2x64GB|4x32GB
+DDR5 RAM,RAM Capacity,128GB,Speed,DDR5-6000,Kit Size,2x64GB|4x32GB
+DDR5 RAM,RAM Capacity,128GB,Speed,DDR5-6400,Kit Size,2x64GB|4x32GB
+DDR5 RAM,RAM Capacity,128GB,Speed,DDR5-7200,Kit Size,2x64GB|4x32GB
+DDR5 RAM,RAM Capacity,128GB,Speed,DDR5-8000,Kit Size,2x64GB|4x32GB
+DDR4 RAM,RAM Capacity,8GB,Speed,DDR4-2666,Kit Size,1x8GB|2x8GB|4x8GB
+DDR4 RAM,RAM Capacity,8GB,Speed,DDR4-3000,Kit Size,1x8GB|2x8GB|4x8GB
+DDR4 RAM,RAM Capacity,8GB,Speed,DDR4-3200,Kit Size,1x8GB|2x8GB|4x8GB
+DDR4 RAM,RAM Capacity,8GB,Speed,DDR4-3600,Kit Size,1x8GB|2x8GB|4x8GB
+DDR4 RAM,RAM Capacity,8GB,Speed,DDR4-4000,Kit Size,1x8GB|2x8GB|4x8GB
+DDR4 RAM,RAM Capacity,16GB,Speed,DDR4-2666,Kit Size,1x16GB|2x16GB|4x16GB
+DDR4 RAM,RAM Capacity,16GB,Speed,DDR4-3000,Kit Size,1x16GB|2x16GB|4x16GB
+DDR4 RAM,RAM Capacity,16GB,Speed,DDR4-3200,Kit Size,1x16GB|2x16GB|4x16GB
+DDR4 RAM,RAM Capacity,16GB,Speed,DDR4-3600,Kit Size,1x16GB|2x16GB|4x16GB
+DDR4 RAM,RAM Capacity,16GB,Speed,DDR4-4000,Kit Size,1x16GB|2x16GB|4x16GB
+DDR4 RAM,RAM Capacity,32GB,Speed,DDR4-2666,Kit Size,2x16GB|4x8GB
+DDR4 RAM,RAM Capacity,32GB,Speed,DDR4-3000,Kit Size,2x16GB|4x8GB
+DDR4 RAM,RAM Capacity,32GB,Speed,DDR4-3200,Kit Size,2x16GB|4x8GB
+DDR4 RAM,RAM Capacity,32GB,Speed,DDR4-3600,Kit Size,2x16GB|4x8GB
+DDR4 RAM,RAM Capacity,32GB,Speed,DDR4-4000,Kit Size,2x16GB|4x8GB
+DDR4 RAM,RAM Capacity,64GB,Speed,DDR4-2666,Kit Size,2x32GB|4x16GB
+DDR4 RAM,RAM Capacity,64GB,Speed,DDR4-3000,Kit Size,2x32GB|4x16GB
+DDR4 RAM,RAM Capacity,64GB,Speed,DDR4-3200,Kit Size,2x32GB|4x16GB
+DDR4 RAM,RAM Capacity,64GB,Speed,DDR4-3600,Kit Size,2x32GB|4x16GB
+DDR4 RAM,RAM Capacity,64GB,Speed,DDR4-4000,Kit Size,2x32GB|4x16GB
+Laptop RAM,RAM Capacity,8GB|16GB|32GB|64GB,Speed,DDR4-3200|DDR5-4800|DDR5-5600,,
+Server RAM,RAM Capacity,16GB|32GB|64GB|128GB|256GB|512GB,Speed,DDR5-4800|DDR5-5600|DDR4-3200,,
+GeForce RTX 50 Series,Color,Black|White|Silver|Gunmetal,Connectivity,Wired,,
+GeForce RTX 40 Series,Color,Black|White|Silver|Gunmetal,Connectivity,Wired,,
+Radeon RX 9000 Series,Color,Black|White|Silver|Gunmetal,Connectivity,Wired,,
+Radeon RX 7000 Series,Color,Black|White|Silver|Gunmetal,Connectivity,Wired,,
+Workstation GPUs,Color,Black|White|Silver|Gunmetal,Connectivity,Wired,,
+OLED Gaming Monitors,Screen Size,"27""|32""|34""|48""|49""",Resolution,2560x1440|3440x1440|3840x2160,Refresh Rate,120Hz|144Hz|240Hz
+240Hz Monitors,Screen Size,"24""|25""|27""|32""",Resolution,1920x1080|2560x1440|3840x2160,Refresh Rate,240Hz|280Hz
+144Hz Monitors,Screen Size,"24""|27""|28""|31.5""|32""",Resolution,1920x1080|2560x1440|3840x2160,Refresh Rate,144Hz|165Hz|180Hz
+360Hz Monitors,Screen Size,"24""|24.5""",Resolution,1920x1080|2560x1440,Refresh Rate,360Hz|480Hz
+Ultrawide Monitors,Screen Size,"34""|38""|49""",Resolution,2560x1080|3440x1440|5120x1440,Refresh Rate,100Hz|144Hz|165Hz|240Hz
+Professional Monitors,Screen Size,"27""|28""|32""|43""",Resolution,2560x1440|3840x2160|7680x4320,Refresh Rate,60Hz|75Hz|120Hz
+4K Monitors,Screen Size,"27""|28""|32""|40""|43""|55""",Resolution,3840x2160,Refresh Rate,60Hz|120Hz|144Hz|160Hz
+Modular PSUs,Wattage,550W|650W|750W|850W|1000W|1200W|1600W,Color,Black|White,,
+Semi-Modular PSUs,Wattage,550W|650W|750W|850W|1000W|1200W|1600W,Color,Black|White,,
+Non-Modular PSUs,Wattage,550W|650W|750W|850W|1000W|1200W|1600W,Color,Black|White,,
+ATX Motherboards,CPU Socket,LGA1700|LGA1851|AM4|AM5,Form Factor,ATX,Color,Black|White|Silver
+Micro-ATX Motherboards,CPU Socket,LGA1700|LGA1851|AM4|AM5,Form Factor,Micro-ATX,Color,Black|White
+Mini-ITX Motherboards,CPU Socket,LGA1851|AM5,Form Factor,Mini-ITX,Color,Black|White
+E-ATX Motherboards,CPU Socket,LGA1851|AM5|sTRX4|TR5,Form Factor,E-ATX,Color,Black
+Full-Size Keyboards,Switch Type,Cherry MX Red|Cherry MX Blue|Cherry MX Brown|Cherry MX Speed|Cherry MX Black|Gateron Red|Gateron Blue|Gateron Yellow|Razer Green|Razer Red|Kailh Box Red|Kailh Box White,Connectivity,Wired|Wireless Bluetooth|Wireless 2.4GHz + Bluetooth,Color,Black|White|Silver|Gray
+TKL Keyboards,Switch Type,Cherry MX Red|Cherry MX Blue|Cherry MX Brown|Cherry MX Speed|Cherry MX Black|Gateron Red|Gateron Blue|Gateron Yellow|Razer Green|Razer Red|Kailh Box Red|Kailh Box White,Connectivity,Wired|Wireless Bluetooth|Wireless 2.4GHz + Bluetooth,Color,Black|White|Silver|Gray
+60% Keyboards,Switch Type,Cherry MX Red|Cherry MX Blue|Cherry MX Brown|Cherry MX Speed|Cherry MX Black|Gateron Red|Gateron Blue|Gateron Yellow|Razer Green|Razer Red|Kailh Box Red|Kailh Box White,Connectivity,Wired|Wireless Bluetooth|Wireless 2.4GHz + Bluetooth,Color,Black|White|Silver|Gray
+75% Keyboards,Switch Type,Cherry MX Red|Cherry MX Blue|Cherry MX Brown|Cherry MX Speed|Cherry MX Black|Gateron Red|Gateron Blue|Gateron Yellow|Razer Green|Razer Red|Kailh Box Red|Kailh Box White,Connectivity,Wired|Wireless Bluetooth|Wireless 2.4GHz + Bluetooth,Color,Black|White|Silver|Gray
+Wireless Keyboards,Switch Type,Cherry MX Red|Cherry MX Brown|Kailh Box Red,Connectivity,Wireless 2.4GHz + Bluetooth,Color,Black|White|Silver|Gray
+Membrane Keyboards,Connectivity,Wired|Wireless 2.4GHz|Wireless Bluetooth,Color,Black|White|Gray,,
+Gaming Mice,Color,Black|White|Pink|Purple|Red|Blue,Connectivity,Wired|Wireless 2.4GHz|Wireless Bluetooth|Wireless 2.4GHz + Bluetooth,,
+Ergonomic Mice,Color,Black|White|Pink|Purple|Red|Blue,Connectivity,Wired|Wireless 2.4GHz|Wireless Bluetooth|Wireless 2.4GHz + Bluetooth,,
+Wireless Gaming Headsets,Color,Black|White|Pink|Blue,Connectivity,Wireless 2.4GHz|Wireless 2.4GHz + Bluetooth,,
+Wired Gaming Headsets,Color,Black|White|Red|Blue,Connectivity,Wired|USB-C Wired|USB-A Wired,,
+Wireless Headphones,Color,Black|White|Silver|Gold|Midnight|Sandstone,Connectivity,Wireless Bluetooth,,
+Earbuds & IEMs,Color,Black|White|Silver|Gold|Pink|Blue,Connectivity,Wireless Bluetooth,,
+Speakers,Color,Black|White,Connectivity,Wired|Wireless Bluetooth,,
+USB Microphones,Color,Black|White|Silver|Red,Connectivity,USB-C Wired|USB-A Wired,,
+Audio Interfaces,Color,Black|Silver|Red,Interface,USB 3.2 Gen 1|USB 3.2 Gen 2|Thunderbolt 4,,
+WiFi 6 Routers,Color,Black|White,Connectivity,Wired,,
+WiFi 6E Routers,Color,Black|White,Connectivity,Wired,,
+Mesh WiFi Systems,Color,Black|White,Connectivity,Wired,,
+Network Switches,Color,Black|Gray|Silver,Interface,USB 3.2 Gen 1,,
+Full-Tower Cases,Color,Black|White|Gray|Silver,Form Factor,Full Tower|Mid Tower|Mini-ITX Case,,
+Mid-Tower Cases,Color,Black|White|Gray|Silver,Form Factor,Full Tower|Mid Tower|Mini-ITX Case,,
+Mini-ITX Cases,Color,Black|White|Gray|Silver,Form Factor,Full Tower|Mid Tower|Mini-ITX Case,,
+Air CPU Coolers,Color,Black|White|Chromax Black|Chromax White,Connectivity,Wired,,
+240mm AIO Coolers,Color,Black|White|Chromax Black|Chromax White,Connectivity,Wired,,
+360mm AIO Coolers,Color,Black|White|Chromax Black|Chromax White,Connectivity,Wired,,
+Case Fans,Color,Black|White|Red|Blue|Pink,Connectivity,Wired,,
+Gaming Laptops,RAM Capacity,16GB|32GB|64GB,Storage Capacity,512GB|1TB|2TB,Color,Black|Silver|Gray|Space Gray|Midnight
+Business Laptops,RAM Capacity,16GB|32GB|64GB,Storage Capacity,512GB|1TB|2TB,Color,Black|Silver|Gray|Space Gray|Midnight
+Ultrabooks,RAM Capacity,16GB|32GB|64GB,Storage Capacity,512GB|1TB|2TB,Color,Black|Silver|Gray|Space Gray|Midnight
+Chromebooks,RAM Capacity,16GB|32GB|64GB,Storage Capacity,512GB|1TB|2TB,Color,Black|Silver|Gray|Space Gray|Midnight
+Android Tablets,Storage Capacity,64GB|128GB|256GB|512GB|1TB,Color,Black|Silver|Gray|Space Gray|Starlight|Blue|Pink,,
+iPads,Storage Capacity,64GB|128GB|256GB|512GB|1TB,Color,Black|Silver|Gray|Space Gray|Starlight|Blue|Pink,,
+Windows Tablets,Storage Capacity,64GB|128GB|256GB|512GB|1TB,Color,Black|Silver|Gray|Space Gray|Starlight|Blue|Pink,,
+Android Phones,Storage Capacity,128GB|256GB|512GB|1TB,Color,Black|White|Silver|Gray|Green|Violet|Blue|Red,RAM Capacity,8GB|12GB|16GB
+iPhones,Storage Capacity,128GB|256GB|512GB|1TB,Color,Black|White|Pink|Blue|Desert Titanium|Black Titanium|Natural Titanium|White Titanium|Ultramarine,,
+Smartwatches,Color,Black|Silver|Gold|Rose Gold|Midnight|Starlight|Product Red,Connectivity,Wireless Bluetooth|Wireless 2.4GHz + Bluetooth,,
+Fitness Trackers,Color,Black|White|Pink|Blue|Teal,Connectivity,Wireless Bluetooth,,
+VR Headsets,Storage Capacity,128GB|256GB|512GB,Color,Black|White|Silver,,
+Mirrorless Cameras,Color,Black|Silver|Graphite,Interface,USB 3.2 Gen 2|USB4,,
+DSLR Cameras,Color,Black|Silver|Graphite,Interface,USB 3.2 Gen 2|USB4,,
+Action Cameras,Color,Black|White|Blue,Connectivity,Wired|Wireless Bluetooth,,
+Webcams,Color,Black|White|Gray,Connectivity,USB-C Wired|USB-A Wired,,
+Security Cameras,Color,Black|White,Connectivity,Wired|Wireless 2.4GHz|Wireless 2.4GHz + Bluetooth,,
+HDMI Cables,Color,Black|White|Gray,Cable Length,0.5m|1m|1.5m|2m|3m|5m,,
+USB-C Cables,Color,Black|White|Gray,Cable Length,0.5m|1m|1.5m|2m|3m|5m,,
+DisplayPort Cables,Color,Black|White|Gray,Cable Length,0.5m|1m|1.5m|2m|3m|5m,,
+Thunderbolt Cables,Color,Black|White|Gray,Cable Length,0.5m|1m|1.5m|2m|3m|5m,,
+Power Cables,Color,Black|White|Gray,Cable Length,0.5m|1m|1.5m|2m|3m|5m,,
+UPS Systems,Wattage,650W|1000W|1500W|2200W|3000W,Color,Black|White,,
+Surge Protectors,Color,Black|White,Connectivity,Wired,,
+Inkjet Printers,Color,Black|White|Gray,Connectivity,Wired|Wireless Bluetooth|Wireless 2.4GHz,,
+Laser Printers,Color,Black|White|Gray,Connectivity,Wired|Wireless Bluetooth|Wireless 2.4GHz,,
+All-in-One Printers,Color,Black|White|Gray,Connectivity,Wired|Wireless Bluetooth|Wireless 2.4GHz,,
+Flatbed Scanners,Color,Black|White|Gray,Connectivity,Wired|Wireless Bluetooth|Wireless 2.4GHz,,

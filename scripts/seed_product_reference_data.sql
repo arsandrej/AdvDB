@@ -1,7 +1,7 @@
 -- =============================================================================
 -- SCRIPT 1 OF 4  FOR PRODUCT STRUCTURE
 -- Loads: BRANDS, CATEGORIES, ATTRIBUTES, ATTRIBUTE_VALUES
---
+-- Run before seed_products_electronics and seed_product_variants
 -- =============================================================================
 
 BEGIN;

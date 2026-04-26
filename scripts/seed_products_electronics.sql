@@ -1,8 +1,11 @@
 -- =============================================================================
--- SCRIPT 2 OF 4  |  seed_02_products.sql
+-- SCRIPT 2 OF 4  |  seed_products_electronics.sql
 -- Loads: PRODUCTS, PRODUCT_CATEGORIES
 --
--- Depends on: seed_01_reference.sql  (CATEGORIES must already exist)
+-- Depends on: seed_products_reference_data.sql  (CATEGORIES must already exist)
+-- Run before: seed_product_variants.sql
+--
+--
 --
 -- products.csv columns:  name, description, category
 --   "category" is the leaf/mid category name matching a row in CATEGORIES.
