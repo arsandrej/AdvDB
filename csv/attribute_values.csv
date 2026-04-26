@@ -1,0 +1,194 @@
+attribute_name,value
+Storage Capacity,120GB
+Storage Capacity,240GB
+Storage Capacity,256GB
+Storage Capacity,480GB
+Storage Capacity,500GB
+Storage Capacity,512GB
+Storage Capacity,960GB
+Storage Capacity,1TB
+Storage Capacity,2TB
+Storage Capacity,4TB
+Storage Capacity,8TB
+Storage Capacity,16TB
+Storage Capacity,20TB
+RAM Capacity,4GB
+RAM Capacity,8GB
+RAM Capacity,16GB
+RAM Capacity,32GB
+RAM Capacity,48GB
+RAM Capacity,64GB
+RAM Capacity,96GB
+RAM Capacity,128GB
+RAM Capacity,192GB
+RAM Capacity,256GB
+RAM Capacity,512GB
+Color,Black
+Color,White
+Color,Silver
+Color,Gray
+Color,Red
+Color,Blue
+Color,Green
+Color,Pink
+Color,Purple
+Color,Gold
+Color,Rose Gold
+Color,Space Gray
+Color,Midnight
+Color,Starlight
+Color,Carbon Black
+Color,Arctic White
+Color,Gunmetal
+CPU Socket,LGA1700
+CPU Socket,LGA1851
+CPU Socket,AM4
+CPU Socket,AM5
+CPU Socket,sTRX4
+CPU Socket,TR5
+CPU Socket,LGA3647
+CPU Socket,LGA4677
+CPU Socket,LGA1200
+CPU Socket,LGA1150
+Form Factor,ATX
+Form Factor,Micro-ATX
+Form Factor,Mini-ITX
+Form Factor,E-ATX
+Form Factor,M.2 2280
+Form Factor,M.2 2242
+Form Factor,M.2 22110
+Form Factor,"2.5"""
+Form Factor,"3.5"""
+Form Factor,Full Tower
+Form Factor,Mid Tower
+Form Factor,Mini-ITX Case
+Form Factor,SFX
+Form Factor,TFX
+Wattage,350W
+Wattage,450W
+Wattage,550W
+Wattage,650W
+Wattage,750W
+Wattage,850W
+Wattage,1000W
+Wattage,1200W
+Wattage,1600W
+Wattage,2000W
+Screen Size,"21.5"""
+Screen Size,"23.8"""
+Screen Size,"24"""
+Screen Size,"25"""
+Screen Size,"27"""
+Screen Size,"28"""
+Screen Size,"31.5"""
+Screen Size,"32"""
+Screen Size,"34"""
+Screen Size,"38"""
+Screen Size,"40"""
+Screen Size,"43"""
+Screen Size,"48"""
+Screen Size,"49"""
+Screen Size,"55"""
+Resolution,1920x1080
+Resolution,2560x1080
+Resolution,2560x1440
+Resolution,3440x1440
+Resolution,3840x1080
+Resolution,3840x2160
+Resolution,5120x1440
+Resolution,7680x4320
+Refresh Rate,60Hz
+Refresh Rate,75Hz
+Refresh Rate,100Hz
+Refresh Rate,120Hz
+Refresh Rate,144Hz
+Refresh Rate,165Hz
+Refresh Rate,180Hz
+Refresh Rate,240Hz
+Refresh Rate,280Hz
+Refresh Rate,360Hz
+Refresh Rate,480Hz
+Switch Type,Cherry MX Red
+Switch Type,Cherry MX Blue
+Switch Type,Cherry MX Brown
+Switch Type,Cherry MX Speed
+Switch Type,Cherry MX Black
+Switch Type,Gateron Red
+Switch Type,Gateron Blue
+Switch Type,Gateron Yellow
+Switch Type,Razer Green
+Switch Type,Razer Red
+Switch Type,Razer Yellow
+Switch Type,Kailh Box Red
+Switch Type,Kailh Box White
+Switch Type,Topre 45g
+Switch Type,Alps SKCM
+Connectivity,Wired
+Connectivity,Wireless 2.4GHz
+Connectivity,Wireless Bluetooth
+Connectivity,Wireless 2.4GHz + Bluetooth
+Connectivity,USB-C Wired
+Connectivity,USB-A Wired
+Interface,PCIe 3.0 x4
+Interface,PCIe 4.0 x4
+Interface,PCIe 5.0 x4
+Interface,SATA III
+Interface,USB 3.2 Gen 1
+Interface,USB 3.2 Gen 2
+Interface,USB 3.2 Gen 2x2
+Interface,Thunderbolt 3
+Interface,Thunderbolt 4
+Interface,USB4
+Speed,DDR4-2133
+Speed,DDR4-2400
+Speed,DDR4-2666
+Speed,DDR4-3000
+Speed,DDR4-3200
+Speed,DDR4-3600
+Speed,DDR4-4000
+Speed,DDR4-4800
+Speed,DDR5-4800
+Speed,DDR5-5200
+Speed,DDR5-5600
+Speed,DDR5-6000
+Speed,DDR5-6400
+Speed,DDR5-7200
+Speed,DDR5-8000
+Kit Size,1x8GB
+Kit Size,1x16GB
+Kit Size,1x32GB
+Kit Size,2x8GB
+Kit Size,2x16GB
+Kit Size,2x24GB
+Kit Size,2x32GB
+Kit Size,2x48GB
+Kit Size,4x8GB
+Kit Size,4x16GB
+Kit Size,4x32GB
+Kit Size,2x64GB
+Kit Size,4x64GB
+Kit Size,4x48GB
+Kit Size,2x128GB
+Kit Size,4x128GB
+Panel Type,IPS
+Panel Type,VA
+Panel Type,TN
+Panel Type,OLED
+Panel Type,QD-OLED
+Panel Type,Mini-LED
+Panel Type,QLED
+Backlight,LED
+Backlight,OLED
+Backlight,Mini-LED
+Backlight,None
+Warranty,1 Year
+Warranty,2 Years
+Warranty,3 Years
+Warranty,5 Years
+Warranty,Limited Lifetime
+Operating System,Windows 11 Home
+Operating System,Windows 11 Pro
+Operating System,macOS
+Operating System,ChromeOS
+Operating System,Android
+Operating System,None

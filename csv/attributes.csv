@@ -1,0 +1,31 @@
+name,data_type,unit,is_variant_attribute
+Storage Capacity,string,GB,true
+RAM Capacity,string,GB,true
+Color,string,,true
+CPU Socket,string,,true
+Form Factor,string,,true
+Wattage,string,W,true
+Screen Size,string,inch,true
+Resolution,string,,true
+Refresh Rate,string,Hz,true
+Switch Type,string,,true
+Connectivity,string,,true
+Interface,string,,true
+Speed,string,,true
+Kit Size,string,sticks,true
+Cache Size,string,MB,false
+TDP,integer,W,false
+Max Memory,string,GB,false
+Panel Type,string,,false
+Backlight,string,,false
+Noise Level,decimal,dBA,false
+VRAM,string,GB,false
+Chipset,string,,false
+PCIe Version,string,,false
+Dimensions,string,mm,false
+Operating System,string,,false
+Battery Life,string,hr,false
+Weight,decimal,kg,false
+Warranty,string,,false
+Cable Length,string,m,false
+Frequency Response,string,Hz,false

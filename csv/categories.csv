@@ -1,0 +1,126 @@
+name,parent_name
+CPUs & Processors,
+Motherboards,
+Memory (RAM),
+Storage,
+Graphics Cards,
+Cases & Cooling,
+Power Supplies,
+Monitors,
+Keyboards & Mice,
+Headsets & Audio,
+Networking,
+Laptops,
+Desktops,
+Tablets,
+Cameras & Camcorders,
+Smartphones,
+Wearables,
+Cables & Adapters,
+UPS & Surge Protectors,
+Printers & Scanners,
+Desktop CPUs,CPUs & Processors
+Laptop CPUs,CPUs & Processors
+Server CPUs,CPUs & Processors
+ATX Motherboards,Motherboards
+Micro-ATX Motherboards,Motherboards
+Mini-ITX Motherboards,Motherboards
+E-ATX Motherboards,Motherboards
+DDR4 RAM,Memory (RAM)
+DDR5 RAM,Memory (RAM)
+Laptop RAM,Memory (RAM)
+Server RAM,Memory (RAM)
+NVMe SSDs,Storage
+SATA SSDs,Storage
+Hard Drives (HDD),Storage
+External Drives,Storage
+USB Flash Drives,Storage
+Memory Cards,Storage
+NVIDIA GPUs,Graphics Cards
+AMD GPUs,Graphics Cards
+Workstation GPUs,Graphics Cards
+Full-Tower Cases,Cases & Cooling
+Mid-Tower Cases,Cases & Cooling
+Mini-ITX Cases,Cases & Cooling
+CPU Coolers,Cases & Cooling
+Case Fans,Cases & Cooling
+Liquid Cooling Kits,Cases & Cooling
+Modular PSUs,Power Supplies
+Semi-Modular PSUs,Power Supplies
+Non-Modular PSUs,Power Supplies
+Gaming Monitors,Monitors
+4K Monitors,Monitors
+Ultrawide Monitors,Monitors
+Professional Monitors,Monitors
+Mechanical Keyboards,Keyboards & Mice
+Membrane Keyboards,Keyboards & Mice
+Gaming Mice,Keyboards & Mice
+Ergonomic Mice,Keyboards & Mice
+Wireless Keyboards,Keyboards & Mice
+Keyboard & Mouse Combos,Keyboards & Mice
+Gaming Headsets,Headsets & Audio
+Wireless Headphones,Headsets & Audio
+Earbuds & IEMs,Headsets & Audio
+Speakers,Headsets & Audio
+USB Microphones,Headsets & Audio
+Audio Interfaces,Headsets & Audio
+WiFi Routers,Networking
+Network Switches,Networking
+Network Adapters,Networking
+Modems,Networking
+Gaming Laptops,Laptops
+Business Laptops,Laptops
+Ultrabooks,Laptops
+Chromebooks,Laptops
+Gaming Desktops,Desktops
+Business Desktops,Desktops
+All-in-One PCs,Desktops
+Android Tablets,Tablets
+iPads,Tablets
+Windows Tablets,Tablets
+Mirrorless Cameras,Cameras & Camcorders
+DSLR Cameras,Cameras & Camcorders
+Action Cameras,Cameras & Camcorders
+Webcams,Cameras & Camcorders
+Security Cameras,Cameras & Camcorders
+Android Phones,Smartphones
+iPhones,Smartphones
+Smartwatches,Wearables
+Fitness Trackers,Wearables
+VR Headsets,Wearables
+HDMI Cables,Cables & Adapters
+USB-C Cables,Cables & Adapters
+DisplayPort Cables,Cables & Adapters
+Thunderbolt Cables,Cables & Adapters
+Power Cables,Cables & Adapters
+UPS Systems,UPS & Surge Protectors
+Surge Protectors,UPS & Surge Protectors
+Inkjet Printers,Printers & Scanners
+Laser Printers,Printers & Scanners
+Flatbed Scanners,Printers & Scanners
+All-in-One Printers,Printers & Scanners
+PCIe 4.0 NVMe SSDs,NVMe SSDs
+PCIe 5.0 NVMe SSDs,NVMe SSDs
+3.5" Desktop HDDs,Hard Drives (HDD)
+2.5" Laptop HDDs,Hard Drives (HDD)
+TKL Keyboards,Mechanical Keyboards
+Full-Size Keyboards,Mechanical Keyboards
+60% Keyboards,Mechanical Keyboards
+75% Keyboards,Mechanical Keyboards
+144Hz Monitors,Gaming Monitors
+240Hz Monitors,Gaming Monitors
+360Hz Monitors,Gaming Monitors
+OLED Gaming Monitors,Gaming Monitors
+Air CPU Coolers,CPU Coolers
+240mm AIO Coolers,CPU Coolers
+360mm AIO Coolers,CPU Coolers
+WiFi 6 Routers,WiFi Routers
+WiFi 6E Routers,WiFi Routers
+Mesh WiFi Systems,WiFi Routers
+WiFi Routers,Networking
+Wired Gaming Headsets,Gaming Headsets
+Wireless Gaming Headsets,Gaming Headsets
+GeForce RTX 40 Series,NVIDIA GPUs
+GeForce RTX 50 Series,NVIDIA GPUs
+Radeon RX 7000 Series,AMD GPUs
+Radeon RX 9000 Series,AMD GPUs
