@@ -1,4 +1,3 @@
-
 BEGIN;
 
 -- ---------------------------------------------------------------------------
@@ -6,26 +5,26 @@ BEGIN;
 -- ---------------------------------------------------------------------------
 
 CREATE TEMP TABLE stg_first_names (
-    first_name VARCHAR(63)
+                                      first_name VARCHAR(63)
 );
 
 CREATE TEMP TABLE stg_last_names (
-    last_name VARCHAR(63)
+                                     last_name VARCHAR(63)
 );
 
 CREATE TEMP TABLE stg_job_titles (
-    job_title         VARCHAR(63),
-    employment_status VARCHAR(63)
+                                     job_title         VARCHAR(63),
+                                     employment_status VARCHAR(63)
 );
 
 CREATE TEMP TABLE stg_roles (
-    name        TEXT,
-    description TEXT
+                                name        TEXT,
+                                description TEXT
 );
 
 CREATE TEMP TABLE stg_permissions (
-    name        TEXT,
-    description TEXT
+                                      name        TEXT,
+                                      description TEXT
 );
 
 -- ---------------------------------------------------------------------------
@@ -75,111 +74,111 @@ ON CONFLICT (name) DO NOTHING;
 INSERT INTO PERMISSIONS_ROLES (permissions_id, roles_id)
 SELECT p.id, r.id
 FROM   ROLES r
-JOIN   PERMISSIONS p ON TRUE
+           JOIN   PERMISSIONS p ON TRUE
 WHERE (
-    -- Admin: everything
-    (r.name = 'Admin')
+          -- Admin: everything
+          (r.name = 'Admin')
 
-    OR (r.name = 'Warehouse Manager' AND p.name IN (
-        'inventory.view','inventory.edit','inventory.reserve',
-        'products.view','products.edit',
-        'warehouses.view','warehouses.edit',
-        'employees.view','employees.edit',
-        'transactions.view','transactions.create','transactions.approve',
-        'shipments.view','shipments.create','shipments.edit',
-        'deliveries.view','deliveries.create','deliveries.edit',
-        'roles.view','reports.view','reports.export','audit.view'
-    ))
+              OR (r.name = 'Warehouse Manager' AND p.name IN (
+                                                              'inventory.view','inventory.edit','inventory.reserve',
+                                                              'products.view','products.edit',
+                                                              'warehouses.view','warehouses.edit',
+                                                              'employees.view','employees.edit',
+                                                              'transactions.view','transactions.create','transactions.approve',
+                                                              'shipments.view','shipments.create','shipments.edit',
+                                                              'deliveries.view','deliveries.create','deliveries.edit',
+                                                              'roles.view','reports.view','reports.export','audit.view'
+              ))
 
-    OR (r.name = 'Operations Supervisor' AND p.name IN (
-        'inventory.view','inventory.edit','inventory.reserve',
-        'products.view',
-        'warehouses.view',
-        'employees.view',
-        'transactions.view','transactions.create','transactions.approve',
-        'shipments.view','shipments.create','shipments.edit',
-        'deliveries.view','deliveries.create','deliveries.edit',
-        'reports.view','reports.export'
-    ))
+              OR (r.name = 'Operations Supervisor' AND p.name IN (
+                                                                  'inventory.view','inventory.edit','inventory.reserve',
+                                                                  'products.view',
+                                                                  'warehouses.view',
+                                                                  'employees.view',
+                                                                  'transactions.view','transactions.create','transactions.approve',
+                                                                  'shipments.view','shipments.create','shipments.edit',
+                                                                  'deliveries.view','deliveries.create','deliveries.edit',
+                                                                  'reports.view','reports.export'
+              ))
 
-    OR (r.name = 'Inventory Analyst' AND p.name IN (
-        'inventory.view','inventory.edit','inventory.reserve',
-        'products.view','products.edit',
-        'warehouses.view',
-        'transactions.view','transactions.create',
-        'reports.view','reports.export','audit.view'
-    ))
+              OR (r.name = 'Inventory Analyst' AND p.name IN (
+                                                              'inventory.view','inventory.edit','inventory.reserve',
+                                                              'products.view','products.edit',
+                                                              'warehouses.view',
+                                                              'transactions.view','transactions.create',
+                                                              'reports.view','reports.export','audit.view'
+              ))
 
-    OR (r.name = 'Receiving Clerk' AND p.name IN (
-        'inventory.view','inventory.edit',
-        'products.view',
-        'warehouses.view',
-        'transactions.view','transactions.create',
-        'deliveries.view','deliveries.create','deliveries.edit',
-        'reports.view'
-    ))
+              OR (r.name = 'Receiving Clerk' AND p.name IN (
+                                                            'inventory.view','inventory.edit',
+                                                            'products.view',
+                                                            'warehouses.view',
+                                                            'transactions.view','transactions.create',
+                                                            'deliveries.view','deliveries.create','deliveries.edit',
+                                                            'reports.view'
+              ))
 
-    OR (r.name = 'Shipping Coordinator' AND p.name IN (
-        'inventory.view','inventory.reserve',
-        'products.view',
-        'warehouses.view',
-        'transactions.view','transactions.create',
-        'shipments.view','shipments.create','shipments.edit',
-        'reports.view'
-    ))
+              OR (r.name = 'Shipping Coordinator' AND p.name IN (
+                                                                 'inventory.view','inventory.reserve',
+                                                                 'products.view',
+                                                                 'warehouses.view',
+                                                                 'transactions.view','transactions.create',
+                                                                 'shipments.view','shipments.create','shipments.edit',
+                                                                 'reports.view'
+              ))
 
-    OR (r.name = 'Forklift Operator' AND p.name IN (
-        'inventory.view',
-        'products.view',
-        'warehouses.view',
-        'transactions.view','transactions.create'
-    ))
+              OR (r.name = 'Forklift Operator' AND p.name IN (
+                                                              'inventory.view',
+                                                              'products.view',
+                                                              'warehouses.view',
+                                                              'transactions.view','transactions.create'
+              ))
 
-    OR (r.name = 'Quality Inspector' AND p.name IN (
-        'inventory.view','inventory.edit',
-        'products.view',
-        'warehouses.view',
-        'transactions.view',
-        'reports.view'
-    ))
+              OR (r.name = 'Quality Inspector' AND p.name IN (
+                                                              'inventory.view','inventory.edit',
+                                                              'products.view',
+                                                              'warehouses.view',
+                                                              'transactions.view',
+                                                              'reports.view'
+              ))
 
-    OR (r.name = 'Procurement Officer' AND p.name IN (
-        'inventory.view',
-        'products.view','products.edit',
-        'warehouses.view',
-        'transactions.view','transactions.create',
-        'deliveries.view','deliveries.create','deliveries.edit',
-        'reports.view','reports.export'
-    ))
+              OR (r.name = 'Procurement Officer' AND p.name IN (
+                                                                'inventory.view',
+                                                                'products.view','products.edit',
+                                                                'warehouses.view',
+                                                                'transactions.view','transactions.create',
+                                                                'deliveries.view','deliveries.create','deliveries.edit',
+                                                                'reports.view','reports.export'
+              ))
 
-    OR (r.name = 'HR Coordinator' AND p.name IN (
-        'employees.view','employees.edit','employees.delete',
-        'roles.view','roles.assign',
-        'warehouses.view',
-        'reports.view'
-    ))
+              OR (r.name = 'HR Coordinator' AND p.name IN (
+                                                           'employees.view','employees.edit','employees.delete',
+                                                           'roles.view','roles.assign',
+                                                           'warehouses.view',
+                                                           'reports.view'
+              ))
 
-    OR (r.name = 'Auditor' AND p.name IN (
-        'inventory.view',
-        'products.view',
-        'warehouses.view',
-        'employees.view',
-        'transactions.view',
-        'shipments.view',
-        'deliveries.view',
-        'roles.view',
-        'permissions.view',
-        'reports.view','reports.export','audit.view'
-    ))
+              OR (r.name = 'Auditor' AND p.name IN (
+                                                    'inventory.view',
+                                                    'products.view',
+                                                    'warehouses.view',
+                                                    'employees.view',
+                                                    'transactions.view',
+                                                    'shipments.view',
+                                                    'deliveries.view',
+                                                    'roles.view',
+                                                    'permissions.view',
+                                                    'reports.view','reports.export','audit.view'
+              ))
 
-    OR (r.name = 'IT Support' AND p.name IN (
-        'employees.view','employees.edit',
-        'roles.view','roles.edit','roles.assign',
-        'permissions.view','permissions.edit',
-        'system.configure',
-        'reports.view','audit.view'
-    ))
-)
+              OR (r.name = 'IT Support' AND p.name IN (
+                                                       'employees.view','employees.edit',
+                                                       'roles.view','roles.edit','roles.assign',
+                                                       'permissions.view','permissions.edit',
+                                                       'system.configure',
+                                                       'reports.view','audit.view'
+              ))
+          )
 ON CONFLICT DO NOTHING;
 
 -- ---------------------------------------------------------------------------
@@ -207,7 +206,7 @@ all_combinations AS (
         l.last_name,
         ROW_NUMBER() OVER (ORDER BY l.last_name, f.first_name) AS rn
     FROM stg_first_names f
-    CROSS JOIN stg_last_names l
+             CROSS JOIN stg_last_names l
 ),
 
 limited AS (
@@ -236,35 +235,58 @@ with_jobs AS (
         j.job_title,
         j.employment_status
     FROM  limited e
-    JOIN  numbered_jobs j
-       ON j.jrn = ((e.rn - 1) % (SELECT cnt FROM job_count)) + 1
+              JOIN  numbered_jobs j
+                    ON j.jrn = ((e.rn - 1) % (SELECT cnt FROM job_count)) + 1
 ),
 
 -- Derive timestamps: hire dates spread evenly across last 10 years
 with_dates AS (
     SELECT
         *,
-        CURRENT_TIMESTAMP
-            - ( ((rn::numeric / 2000) * 365 * 10) || ' days' )::INTERVAL
-            AS hired_at,
+        -- Random hire date between 1 day and 3650 days (~10 years) ago
+        CURRENT_TIMESTAMP - (floor(random() * 3650) + 1) * INTERVAL '1 day' AS hired_at
+    FROM with_jobs
+),
+
+with_terminations AS (
+    SELECT
+        *,
         CASE
             WHEN employment_status = 'terminated'
-            THEN CURRENT_TIMESTAMP
-                 - ( ((rn::numeric / 2000) * 365 * 2) || ' days' )::INTERVAL
+                THEN
+                -- Add a random number of days (1 … days_until_now) to hire date
+                hired_at
+                    + (1 + floor(random() * EXTRACT(DAY FROM (CURRENT_TIMESTAMP - hired_at))::int))
+                    * INTERVAL '1 day'
             ELSE NULL
-        END AS terminated_at
-    FROM with_jobs
+            END AS terminated_at
+    FROM with_dates
+),
+
+-- Temporary sequence for manager reference
+temp_employees AS (
+    SELECT
+        'EMP-' || LPAD(rn::text, 7, '0') AS employee_number,
+        first_name,
+        last_name,
+        LOWER(first_name) || '.' || LOWER(last_name)
+            || rn::text || '@warehouseco.com' AS email,
+        '+1-555-' || LPAD(((100000 + rn * 97) % 900000 + 100000)::text, 6, '0') AS phone,
+        job_title,
+        employment_status,
+        hired_at,
+        terminated_at,
+        rn
+    FROM with_terminations
 )
 
--- Final SELECT — manager_id resolved by employee_number of senior staff
+-- Final SELECT with manager_id resolution
 SELECT
-    'EMP-' || LPAD(rn::text, 7, '0')                                  AS employee_number,
+    employee_number,
     first_name,
     last_name,
-    LOWER(first_name) || '.' || LOWER(last_name)
-        || rn::text || '@warehouseco.com'                              AS email,
-    '+1-555-' || LPAD(((100000 + rn * 97) % 900000 + 100000)::text, 6, '0')
-                                                                       AS phone,
+    email,
+    phone,
     job_title,
     employment_status,
     hired_at,
@@ -275,18 +297,11 @@ SELECT
         WHEN rn <= 20 THEN NULL
         ELSE (
             SELECT id FROM EMPLOYEES
-            WHERE  employee_number = 'EMP-' || LPAD(((rn % 20) + 1)::text, 7, '0')
+            WHERE employee_number = 'EMP-' || LPAD(((rn - 1) % 20 + 1)::text, 7, '0')
         )
-    END                                                                AS manager_id
-FROM with_dates
+        END AS manager_id
+FROM temp_employees
 ORDER BY rn;
-
--- ---------------------------------------------------------------------------
--- 7. ROLES_EMPLOYEES
---    Assign roles based on job title (primary role) + two bonus rules:
---      • Every 7th employee also gets Auditor (cross-functional read access)
---      • The first 20 employees (senior staff) also get Warehouse Manager
--- ---------------------------------------------------------------------------
 
 -- ---------------------------------------------------------------------------
 -- 7. ROLES_EMPLOYEES
@@ -401,7 +416,6 @@ SELECT role_id, employee_id
 FROM   all_assignments
 ON CONFLICT DO NOTHING;
 
-
 -- ---------------------------------------------------------------------------
 -- 8. CLEANUP
 -- ---------------------------------------------------------------------------
@@ -411,6 +425,11 @@ DROP TABLE stg_last_names;
 DROP TABLE stg_job_titles;
 DROP TABLE stg_roles;
 DROP TABLE stg_permissions;
+
+UPDATE EMPLOYEES
+SET
+    created_at = hired_at,
+    updated_at = COALESCE(terminated_at, hired_at);
 
 COMMIT;
 
