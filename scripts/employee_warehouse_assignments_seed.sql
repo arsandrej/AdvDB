@@ -48,50 +48,50 @@ BEGIN;
 -- ---------------------------------------------------------------------------
 
 INSERT INTO EMPLOYEE_WAREHOUSE_ASSIGNMENTS
-    (employee_id, warehouse_id, start_date, end_date, is_primary, notes, created_at, updated_at)
-
+(employee_id, warehouse_id, start_date, end_date, is_primary, notes, created_at, updated_at)
 WITH
-
-ranked_employees AS (
-    SELECT
-        id,
-        hired_at,
-        terminated_at,
-        ROW_NUMBER() OVER (ORDER BY id) AS rn
-    FROM EMPLOYEES
-),
-
-warehouses_ranked AS (
-    SELECT
-        id,
-        ROW_NUMBER() OVER (ORDER BY id) AS wrn
-    FROM WAREHOUSES
-),
-
-assigned AS (
-    SELECT
-        e.id            AS employee_id,
-        w.id            AS warehouse_id,
-        e.hired_at::date AS start_date,
-        e.terminated_at::date AS end_date,   -- NULL for active
-        e.rn
-    FROM ranked_employees e
-    JOIN warehouses_ranked w
-      ON w.wrn = ((e.rn - 1) % 16) + 1
-)
-
+    ranked_employees AS (
+        SELECT
+            id,
+            hired_at,
+            terminated_at,
+            ROW_NUMBER() OVER (ORDER BY id) AS rn
+        FROM EMPLOYEES
+        WHERE
+            terminated_at IS NULL
+           OR hired_at::date + 2 <= terminated_at::date   -- ensures start_date <= end_date
+    ),
+    warehouses_ranked AS (
+        SELECT
+            id,
+            ROW_NUMBER() OVER (ORDER BY id) AS wrn
+        FROM WAREHOUSES
+    ),
+    assigned AS (
+        SELECT
+            e.id            AS employee_id,
+            w.id            AS warehouse_id,
+            e.hired_at::date + 1 AS start_date,
+            CASE
+                WHEN e.terminated_at IS NULL THEN NULL
+                ELSE e.terminated_at::date - 1
+                END AS end_date,
+            e.rn
+        FROM ranked_employees e
+                 JOIN warehouses_ranked w
+                      ON w.wrn = ((e.rn - 1) % 16) + 1
+    )
 SELECT
     employee_id,
     warehouse_id,
     start_date,
     end_date,
-    TRUE                                        AS is_primary,
-    'Initial primary warehouse assignment'      AS notes,
-    CURRENT_TIMESTAMP                           AS created_at,
-    CURRENT_TIMESTAMP                           AS updated_at
+    TRUE,
+    'Initial primary warehouse assignment',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
 FROM assigned
 ON CONFLICT (employee_id, warehouse_id, start_date) DO NOTHING;
-
 -- ---------------------------------------------------------------------------
 -- 4. TEMPORARY SECONDARY ASSIGNMENTS (same-city partner warehouse)
 --
@@ -209,29 +209,22 @@ SELECT
     employee_id,
     warehouse_id,
     start_date,
-    -- Cap end_date at termination date (or leave open if still active & rot≥4)
     CASE
         WHEN term_date IS NOT NULL AND raw_end_date > term_date
-            THEN term_date
+            THEN term_date - 1
         WHEN term_date IS NULL AND rot >= 6
-            THEN NULL          -- some current employees have open-ended temps
+            THEN NULL
         ELSE raw_end_date
-    END                                         AS end_date,
-    FALSE                                       AS is_primary,
-    'Temporary assignment – rotation ' || rot   AS notes,
-    CURRENT_TIMESTAMP                           AS created_at,
-    CURRENT_TIMESTAMP                           AS updated_at
+        END AS end_date,
+    FALSE AS is_primary,
+    'Temporary assignment – rotation ' || rot AS notes,
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
 FROM temp_raw
 WHERE
-    -- Exclude rows where the temp assignment starts after termination
-    (term_date IS NULL OR start_date <= term_date)
-    -- Exclude rows where calculated start_date is in the future
-    AND start_date <= CURRENT_DATE
-    -- Exclude rows with nonsensical very-short stints
-    AND (
-            term_date IS NULL
-            OR (term_date - start_date) >= 7
-        )
+    (term_date IS NULL OR start_date < term_date)
+  AND start_date <= CURRENT_DATE
+  AND (term_date IS NULL OR (term_date - start_date) >= 7)
 ON CONFLICT (employee_id, warehouse_id, start_date) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
@@ -332,6 +325,13 @@ WHERE
     h_end >= h_start          -- sanity: end must not precede start
     AND h_start >= '2010-01-01'::date
 ON CONFLICT (employee_id, warehouse_id, start_date) DO NOTHING;
+
+UPDATE employee_warehouse_assignments
+SET
+    created_at = start_date,
+    updated_at = COALESCE(end_date, start_date);
+
+COMMIT;
 
 COMMIT;
 
