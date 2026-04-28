@@ -135,14 +135,14 @@ ON CONFLICT (bin_code) DO NOTHING;
 -- 7. Verification summary
 -- -----------------------------------------------------------
 
-SELECT 'WAREHOUSES' AS "Table",  COUNT(*) AS "Rows" FROM WAREHOUSES
+/*SELECT 'WAREHOUSES' AS "Table",  COUNT(*) AS "Rows" FROM WAREHOUSES
     WHERE name IN (SELECT name FROM stg_warehouses)  -- stg is gone; just totals
 UNION ALL
 SELECT 'SECTIONS',   COUNT(*) FROM SECTIONS
 UNION ALL
 SELECT 'LOCATIONS',  COUNT(*) FROM LOCATIONS
 UNION ALL
-SELECT 'BINS',       COUNT(*) FROM BINS;
+SELECT 'BINS',       COUNT(*) FROM BINS;*/
 
 
 COMMIT;
