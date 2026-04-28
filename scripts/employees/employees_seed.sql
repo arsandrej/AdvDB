@@ -1,0 +1,421 @@
+BEGIN;
+
+-- ---------------------------------------------------------------------------
+-- 1. STAGING TABLES
+-- ---------------------------------------------------------------------------
+
+CREATE TEMP TABLE stg_first_names
+(
+    first_name VARCHAR(63)
+);
+
+CREATE TEMP TABLE stg_last_names
+(
+    last_name VARCHAR(63)
+);
+
+CREATE TEMP TABLE stg_job_titles
+(
+    job_title         VARCHAR(63),
+    employment_status VARCHAR(63)
+);
+
+CREATE TEMP TABLE stg_roles
+(
+    name        TEXT,
+    description TEXT
+);
+
+CREATE TEMP TABLE stg_permissions
+(
+    name        TEXT,
+    description TEXT
+);
+
+-- ---------------------------------------------------------------------------
+-- 2. LOAD CSVs INTO STAGING TABLES
+-- ---------------------------------------------------------------------------
+
+COPY stg_first_names FROM '/csv/first_names.csv' CSV HEADER;
+COPY stg_last_names FROM '/csv/last_names.csv' CSV HEADER;
+COPY stg_job_titles FROM '/csv/job_titles.csv' CSV HEADER;
+COPY stg_roles FROM '/csv/roles.csv' CSV HEADER;
+COPY stg_permissions FROM '/csv/permissions.csv' CSV HEADER;
+
+-- Deduplicate names that may appear more than once in the CSVs
+DELETE
+FROM stg_first_names
+WHERE ctid NOT IN (SELECT MIN(ctid)
+                   FROM stg_first_names
+                   GROUP BY first_name);
+
+DELETE
+FROM stg_last_names
+WHERE ctid NOT IN (SELECT MIN(ctid)
+                   FROM stg_last_names
+                   GROUP BY last_name);
+
+-- ---------------------------------------------------------------------------
+-- 3. ROLES
+-- ---------------------------------------------------------------------------
+
+INSERT INTO ROLES (name, description)
+SELECT name, description
+FROM stg_roles
+ON CONFLICT (name) DO NOTHING;
+
+-- ---------------------------------------------------------------------------
+-- 4. PERMISSIONS
+-- ---------------------------------------------------------------------------
+
+INSERT INTO PERMISSIONS (name, description)
+SELECT name, description
+FROM stg_permissions
+ON CONFLICT (name) DO NOTHING;
+
+-- ---------------------------------------------------------------------------
+-- 5. PERMISSIONS_ROLES
+--    Curated access matrix: each role receives a specific set of permissions.
+-- ---------------------------------------------------------------------------
+
+INSERT INTO PERMISSIONS_ROLES (permissions_id, roles_id)
+SELECT p.id, r.id
+FROM ROLES r
+         JOIN PERMISSIONS p ON TRUE
+WHERE (
+-- Admin: everything
+          (r.name = 'Admin')
+              OR (r.name = 'Warehouse Manager' AND p.name IN (
+                                                              'inventory.view', 'inventory.edit', 'inventory.reserve',
+                                                              'products.view', 'products.edit',
+                                                              'warehouses.view', 'warehouses.edit',
+                                                              'employees.view', 'employees.edit',
+                                                              'transactions.view', 'transactions.create',
+                                                              'transactions.approve',
+                                                              'shipments.view', 'shipments.create', 'shipments.edit',
+                                                              'deliveries.view', 'deliveries.create', 'deliveries.edit',
+                                                              'roles.view', 'reports.view', 'reports.export',
+                                                              'audit.view'
+              ))
+              OR (r.name = 'Operations Supervisor' AND p.name IN (
+                                                                  'inventory.view', 'inventory.edit',
+                                                                  'inventory.reserve',
+                                                                  'products.view',
+                                                                  'warehouses.view',
+                                                                  'employees.view',
+                                                                  'transactions.view', 'transactions.create',
+                                                                  'transactions.approve',
+                                                                  'shipments.view', 'shipments.create',
+                                                                  'shipments.edit',
+                                                                  'deliveries.view', 'deliveries.create',
+                                                                  'deliveries.edit',
+                                                                  'reports.view', 'reports.export'
+              ))
+              OR (r.name = 'Inventory Analyst' AND p.name IN (
+                                                              'inventory.view', 'inventory.edit', 'inventory.reserve',
+                                                              'products.view', 'products.edit',
+                                                              'warehouses.view',
+                                                              'transactions.view', 'transactions.create',
+                                                              'reports.view', 'reports.export', 'audit.view'
+              ))
+              OR (r.name = 'Receiving Clerk' AND p.name IN (
+                                                            'inventory.view', 'inventory.edit',
+                                                            'products.view',
+                                                            'warehouses.view',
+                                                            'transactions.view', 'transactions.create',
+                                                            'deliveries.view', 'deliveries.create', 'deliveries.edit',
+                                                            'reports.view'
+              ))
+              OR (r.name = 'Shipping Coordinator' AND p.name IN (
+                                                                 'inventory.view', 'inventory.reserve',
+                                                                 'products.view',
+                                                                 'warehouses.view',
+                                                                 'transactions.view', 'transactions.create',
+                                                                 'shipments.view', 'shipments.create', 'shipments.edit',
+                                                                 'reports.view'
+              ))
+              OR (r.name = 'Forklift Operator' AND p.name IN (
+                                                              'inventory.view',
+                                                              'products.view',
+                                                              'warehouses.view',
+                                                              'transactions.view', 'transactions.create'
+              ))
+              OR (r.name = 'Quality Inspector' AND p.name IN (
+                                                              'inventory.view', 'inventory.edit',
+                                                              'products.view',
+                                                              'warehouses.view',
+                                                              'transactions.view',
+                                                              'reports.view'
+              ))
+              OR (r.name = 'Procurement Officer' AND p.name IN (
+                                                                'inventory.view',
+                                                                'products.view', 'products.edit',
+                                                                'warehouses.view',
+                                                                'transactions.view', 'transactions.create',
+                                                                'deliveries.view', 'deliveries.create',
+                                                                'deliveries.edit',
+                                                                'reports.view', 'reports.export'
+              ))
+              OR (r.name = 'HR Coordinator' AND p.name IN (
+                                                           'employees.view', 'employees.edit', 'employees.delete',
+                                                           'roles.view', 'roles.assign',
+                                                           'warehouses.view',
+                                                           'reports.view'
+              ))
+              OR (r.name = 'Auditor' AND p.name IN (
+                                                    'inventory.view',
+                                                    'products.view',
+                                                    'warehouses.view',
+                                                    'employees.view',
+                                                    'transactions.view',
+                                                    'shipments.view',
+                                                    'deliveries.view',
+                                                    'roles.view',
+                                                    'permissions.view',
+                                                    'reports.view', 'reports.export', 'audit.view'
+              ))
+              OR (r.name = 'IT Support' AND p.name IN (
+                                                       'employees.view', 'employees.edit',
+                                                       'roles.view', 'roles.edit', 'roles.assign',
+                                                       'permissions.view', 'permissions.edit',
+                                                       'system.configure',
+                                                       'reports.view', 'audit.view'
+              ))
+          )
+ON CONFLICT DO NOTHING;
+
+-- ---------------------------------------------------------------------------
+-- 6. EMPLOYEES
+-- ---------------------------------------------------------------------------
+
+INSERT INTO EMPLOYEES (employee_number,
+                       first_name,
+                       last_name,
+                       email,
+                       phone,
+                       job_title,
+                       employment_status,
+                       hired_at,
+                       terminated_at,
+                       manager_id)
+WITH
+
+-- Cross join produces all unique first × last combinations
+all_combinations AS (SELECT f.first_name,
+                            l.last_name,
+                            ROW_NUMBER() OVER (ORDER BY l.last_name, f.first_name) AS rn
+                     FROM stg_first_names f
+                              CROSS JOIN stg_last_names l),
+
+limited AS (SELECT *
+            FROM all_combinations
+            ORDER BY RANDOM()
+            LIMIT 2000 --produce more employees
+),
+
+-- Number every job row so we can cycle through them
+numbered_jobs AS (SELECT job_title,
+                         employment_status,
+                         ROW_NUMBER() OVER (ORDER BY employment_status DESC, job_title) AS jrn
+                  FROM stg_job_titles),
+
+job_count AS (SELECT COUNT(*) AS cnt FROM stg_job_titles),
+
+-- Pair each employee with a job via modular arithmetic
+with_jobs AS (SELECT e.first_name,
+                     e.last_name,
+                     e.rn,
+                     j.job_title,
+                     j.employment_status
+              FROM limited e
+                       JOIN numbered_jobs j
+                            ON j.jrn = ((e.rn - 1) % (SELECT cnt FROM job_count)) + 1),
+
+-- Derive timestamps: hire dates spread evenly across last 10 years
+with_dates AS (SELECT *,
+                      -- Random hire date between 1 day and 3650 days (~10 years) ago
+                      CURRENT_TIMESTAMP - (floor(random() * 3650) + 1) * INTERVAL '1 day' AS hired_at
+               FROM with_jobs),
+
+with_terminations AS (SELECT *,
+                             CASE
+                                 WHEN employment_status = 'terminated'
+                                     THEN
+                                     -- Add a random number of days (1 … days_until_now) to hire date
+                                     hired_at
+                                         + (1 + floor(random() * EXTRACT(DAY FROM (CURRENT_TIMESTAMP - hired_at))::int))
+                                         * INTERVAL '1 day'
+                                 ELSE NULL
+                                 END AS terminated_at
+                      FROM with_dates),
+
+-- Temporary sequence for manager reference
+temp_employees AS (SELECT 'EMP-' || LPAD(rn::text, 7, '0')                                        AS employee_number,
+                          first_name,
+                          last_name,
+                          LOWER(first_name) || '.' || LOWER(last_name)
+                              || rn::text || '@warehouseco.com'                                   AS email,
+                          '+1-555-' || LPAD(((100000 + rn * 97) % 900000 + 100000)::text, 6, '0') AS phone,
+                          job_title,
+                          employment_status,
+                          hired_at,
+                          terminated_at,
+                          rn
+                   FROM with_terminations)
+
+-- Final SELECT with manager_id resolution
+SELECT employee_number,
+       first_name,
+       last_name,
+       email,
+       phone,
+       job_title,
+       employment_status,
+       hired_at,
+       terminated_at,
+       -- First 20 employees are top-level managers (no manager_id).
+       -- Everyone else cycles through those 20 as their manager.
+       CASE
+           WHEN rn <= 20 THEN NULL
+           ELSE (SELECT id
+                 FROM EMPLOYEES
+                 WHERE employee_number = 'EMP-' || LPAD(((rn - 1) % 20 + 1)::text, 7, '0'))
+           END AS manager_id
+FROM temp_employees
+ORDER BY rn;
+
+-- ---------------------------------------------------------------------------
+-- 7. ROLES_EMPLOYEES
+--    Improved role distribution:
+--      • First 3 employees → Admin
+--      • Realistic job → role mapping
+--      • Every 7th employee → Auditor (if not already)
+-- ---------------------------------------------------------------------------
+
+INSERT INTO ROLES_EMPLOYEES (roles_id, employees_id)
+
+WITH emp_numbered AS (SELECT id,
+                             job_title,
+                             ROW_NUMBER() OVER (ORDER BY id) AS rn
+                      FROM EMPLOYEES),
+
+-- Primary role derived from job title (clean hierarchy)
+     primary_role AS (SELECT e.id   AS employee_id,
+                             r.id   AS role_id,
+                             r.name AS role_name
+                      FROM emp_numbered e
+                               JOIN ROLES r ON r.name = CASE e.job_title
+
+                          -- Top level
+                                                            WHEN 'Warehouse Manager' THEN 'Warehouse Manager'
+
+                          -- Supervisors (not managers)
+                                                            WHEN 'Assistant Warehouse Manager'
+                                                                THEN 'Operations Supervisor'
+                                                            WHEN 'Operations Supervisor' THEN 'Operations Supervisor'
+                                                            WHEN 'Warehouse Supervisor' THEN 'Operations Supervisor'
+                                                            WHEN 'Logistics Coordinator' THEN 'Operations Supervisor'
+
+                          -- Inventory / data
+                                                            WHEN 'Inventory Specialist' THEN 'Inventory Analyst'
+                                                            WHEN 'Inventory Control Manager' THEN 'Inventory Analyst'
+                                                            WHEN 'Senior Inventory Analyst' THEN 'Inventory Analyst'
+                                                            WHEN 'Data Entry Clerk' THEN 'Inventory Analyst'
+
+                          -- Receiving
+                                                            WHEN 'Receiving Clerk' THEN 'Receiving Clerk'
+                                                            WHEN 'Returns Processor' THEN 'Receiving Clerk'
+
+                          -- Shipping
+                                                            WHEN 'Shipping Coordinator' THEN 'Shipping Coordinator'
+                                                            WHEN 'Dispatch Coordinator' THEN 'Shipping Coordinator'
+                                                            WHEN 'Packing Specialist' THEN 'Shipping Coordinator'
+                                                            WHEN 'Fleet Coordinator' THEN 'Shipping Coordinator'
+
+                          -- Floor workers
+                                                            WHEN 'Forklift Operator' THEN 'Forklift Operator'
+                                                            WHEN 'Loading Dock Supervisor' THEN 'Forklift Operator'
+                                                            WHEN 'Stock Associate' THEN 'Forklift Operator'
+                                                            WHEN 'Warehouse Associate' THEN 'Forklift Operator'
+
+                          -- Quality
+                                                            WHEN 'Quality Control Inspector' THEN 'Quality Inspector'
+
+                          -- Procurement
+                                                            WHEN 'Procurement Officer' THEN 'Procurement Officer'
+                                                            WHEN 'Supply Chain Analyst' THEN 'Procurement Officer'
+
+                          -- HR / IT
+                                                            WHEN 'HR Coordinator' THEN 'HR Coordinator'
+                                                            WHEN 'IT Support Technician' THEN 'IT Support'
+
+                          -- Special
+                                                            WHEN 'Safety Officer' THEN 'Auditor'
+
+                                                            ELSE 'Inventory Analyst'
+                          END),
+
+-- First 3 employees are Admins
+     admin_extra AS (SELECT e.id AS employee_id,
+                            r.id AS role_id
+                     FROM emp_numbered e
+                              JOIN ROLES r ON r.name = 'Admin'
+                     WHERE e.rn <= 3),
+
+-- Every 7th employee also gets Auditor (if not already)
+     auditor_extra AS (SELECT e.id AS employee_id,
+                              r.id AS role_id
+                       FROM emp_numbered e
+                                JOIN ROLES r ON r.name = 'Auditor'
+                                JOIN primary_role pr
+                                     ON pr.employee_id = e.id
+                                         AND pr.role_name <> 'Auditor'
+                       WHERE e.rn % 7 = 0),
+
+     all_assignments AS (SELECT employee_id, role_id
+                         FROM primary_role
+                         UNION
+                         SELECT employee_id, role_id
+                         FROM admin_extra
+                         UNION
+                         SELECT employee_id, role_id
+                         FROM auditor_extra)
+
+SELECT role_id, employee_id
+FROM all_assignments
+ON CONFLICT DO NOTHING;
+
+-- ---------------------------------------------------------------------------
+-- 8. CLEANUP
+-- ---------------------------------------------------------------------------
+
+DROP TABLE stg_first_names;
+DROP TABLE stg_last_names;
+DROP TABLE stg_job_titles;
+DROP TABLE stg_roles;
+DROP TABLE stg_permissions;
+
+UPDATE EMPLOYEES
+SET created_at = hired_at,
+    updated_at = COALESCE(terminated_at, hired_at);
+
+COMMIT;
+
+-- ---------------------------------------------------------------------------
+-- SANITY CHECK
+-- ---------------------------------------------------------------------------
+SELECT 'EMPLOYEES' AS tbl, COUNT(*) AS rows
+FROM EMPLOYEES
+UNION ALL
+SELECT 'ROLES', COUNT(*)
+FROM ROLES
+UNION ALL
+SELECT 'PERMISSIONS', COUNT(*)
+FROM PERMISSIONS
+UNION ALL
+SELECT 'PERMISSIONS_ROLES', COUNT(*)
+FROM PERMISSIONS_ROLES
+UNION ALL
+SELECT 'ROLES_EMPLOYEES', COUNT(*)
+FROM ROLES_EMPLOYEES
+ORDER BY tbl;
