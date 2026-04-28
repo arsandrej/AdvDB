@@ -130,7 +130,6 @@ WHERE
     w.name IN (SELECT name FROM stg_warehouses)
 ON CONFLICT (bin_code) DO NOTHING;
 
-COMMIT;
 
 -- -----------------------------------------------------------
 -- 7. Verification summary
@@ -144,3 +143,6 @@ UNION ALL
 SELECT 'LOCATIONS',  COUNT(*) FROM LOCATIONS
 UNION ALL
 SELECT 'BINS',       COUNT(*) FROM BINS;
+
+
+COMMIT;
