@@ -19,6 +19,7 @@ services:
       - ./csv:/csv
       - postgres_data:/var/lib/postgresql/postgres_data
       - ./init:/docker-entrypoint-initdb.d
+      - ./scripts:/scripts
 
 volumes:
   postgres_data:
