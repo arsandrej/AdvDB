@@ -17,6 +17,9 @@
 \echo 'Large products'
 \ir products/large_products.sql
 
+\echo 'Transaction types'
+\ir inventory/transaction_type_seed.sql
+
 \echo '========================================='
 \echo '✅ Master seed completed successfully!'
 \echo '========================================='
