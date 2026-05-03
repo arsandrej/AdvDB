@@ -22,6 +22,12 @@ All sample data is created using parameterized SQL scripts. Core transactional t
 ## Usage
 Works both on a local PostgreSQL instance and on the faculty’s FINKI server – just point the DDL and data scripts to the target host. The repository is updated as each development phase is completed and approved.
 
+## Relational Model
+
+The following diagram illustrates the relational schema of the Warehouse Inventory Management System, including tables, attributes, and relationships:
+
+![Relational Model](images/wims.png)
+
 ---
 
 *Demonstrates practical SQL skills: schema design, large‑scale data generation, query optimization, and procedural database programming.*
