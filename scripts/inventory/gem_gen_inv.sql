@@ -112,171 +112,258 @@ $$;
 -- ==============================================================================
 -- 3. Core Data Generation Procedure
 -- ==============================================================================
-CREATE OR REPLACE PROCEDURE generate_inventory_data(p_target_movements BIGINT)
-    LANGUAGE plpgsql AS $$
+CREATE
+    OR REPLACE PROCEDURE generate_inventory_data(p_target_movements BIGINT)
+    LANGUAGE plpgsql AS
+$$
 DECLARE
     -- Bounds & Lookups
-    v_min_emp BIGINT; v_max_emp BIGINT;
-    v_min_bin BIGINT; v_max_bin BIGINT;
-    v_min_var BIGINT; v_max_var BIGINT;
-    v_min_inv BIGINT; v_max_inv BIGINT;
+    v_min_emp BIGINT; v_max_emp
+              BIGINT;
+    v_min_bin
+              BIGINT; v_max_bin
+              BIGINT;
+    v_min_var
+              BIGINT; v_max_var
+              BIGINT;
+    v_min_inv
+              BIGINT; v_max_inv
+              BIGINT;
 
     -- Transaction loop variables
-    v_movements_inserted BIGINT := 0;
-    v_txn_id BIGINT;
-    v_txn_type VARCHAR(50);
-    v_emp_id BIGINT;
-    v_current_time TIMESTAMP := '2024-01-01 00:00:00';
-    v_time_step INTERVAL;
+    v_movements_inserted
+              BIGINT    := 0;
+    v_txn_id
+              BIGINT;
+    v_txn_type
+              VARCHAR(50);
+    v_emp_id
+              BIGINT;
+    v_current_time
+              TIMESTAMP := '2024-01-01 00:00:00';
+    v_time_step
+              INTERVAL;
 
     -- Movement loop variables
-    v_num_movements INT;
-    v_type_rand INT;
-    v_var_id BIGINT;
-    v_from_bin BIGINT;
-    v_to_bin BIGINT;
-    v_qty INT;
-    v_qty_available INT;
-    v_success BOOLEAN;
+    v_num_movements
+              INT;
+    v_type_rand
+              INT;
+    v_var_id
+              BIGINT;
+    v_from_bin
+              BIGINT;
+    v_to_bin
+              BIGINT;
+    v_qty
+              INT;
+    v_qty_available
+              INT;
+    v_success
+              BOOLEAN;
 BEGIN
-    RAISE NOTICE 'Starting generation of % movements (Delegating INVENTORY updates to trigger)...', p_target_movements;
+    RAISE
+        NOTICE 'Starting generation of % movements (Delegating INVENTORY updates to trigger)...', p_target_movements;
 
     -- Calculate average time step
-    v_time_step := (31536000.0 / (p_target_movements / 15.0)) * INTERVAL '1 second';
+    v_time_step
+        := (31536000.0 / (p_target_movements / 15.0)) * INTERVAL '1 second';
 
-    SELECT min(id), max(id) INTO v_min_emp, v_max_emp FROM EMPLOYEES;
-    SELECT min(id), max(id) INTO v_min_bin, v_max_bin FROM BINS;
-    SELECT min(id), max(id) INTO v_min_var, v_max_var FROM PRODUCT_VARIANTS;
+    SELECT min(id), max(id)
+    INTO v_min_emp, v_max_emp
+    FROM EMPLOYEES;
+    SELECT min(id), max(id)
+    INTO v_min_bin, v_max_bin
+    FROM BINS;
+    SELECT min(id), max(id)
+    INTO v_min_var, v_max_var
+    FROM PRODUCT_VARIANTS;
 
-    PERFORM setseed(0.12345);
+    PERFORM
+        setseed(0.12345);
 
-    WHILE v_movements_inserted < p_target_movements LOOP
+    WHILE
+        v_movements_inserted < p_target_movements
+        LOOP
 
             v_type_rand := random_int(1, 100);
-            IF v_type_rand <= 40 THEN
+            IF
+                v_type_rand <= 40 THEN
                 v_txn_type := 'RECEIPT';
-                v_num_movements := random_int(1, 100);
-            ELSIF v_type_rand <= 80 THEN
+                v_num_movements
+                    := random_int(1, 100);
+            ELSIF
+                v_type_rand <= 80 THEN
                 v_txn_type := 'SHIPMENT';
-                v_num_movements := random_int(1, 50);
+                v_num_movements
+                    := random_int(1, 50);
             ELSE
                 v_txn_type := 'TRANSFER';
-                v_num_movements := random_int(1, 50);
+                v_num_movements
+                    := random_int(1, 50);
             END IF;
 
-            IF v_movements_inserted + v_num_movements > p_target_movements THEN
+            IF
+                v_movements_inserted + v_num_movements > p_target_movements THEN
                 v_num_movements := p_target_movements - v_movements_inserted;
             END IF;
 
             -- Pick an active employee
-            SELECT e.id INTO v_emp_id
+            SELECT e.id
+            INTO v_emp_id
             FROM EMPLOYEES e
                      JOIN EMPLOYEE_WAREHOUSE_ASSIGNMENTS ewa ON e.id = ewa.employee_id
             WHERE e.id >= random_bigint(v_min_emp, v_max_emp)
               AND (ewa.end_date IS NULL OR ewa.end_date > v_current_time::date)
             LIMIT 1;
 
-            IF v_emp_id IS NULL THEN
-                SELECT employee_id INTO v_emp_id FROM EMPLOYEE_WAREHOUSE_ASSIGNMENTS LIMIT 1;
+            IF
+                v_emp_id IS NULL THEN
+                SELECT employee_id
+                INTO v_emp_id
+                FROM EMPLOYEE_WAREHOUSE_ASSIGNMENTS
+                LIMIT 1;
             END IF;
 
-            v_current_time := v_current_time + v_time_step;
+            v_current_time
+                := v_current_time + v_time_step;
 
             -- Insert Parent Transaction
             INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, created_at)
             VALUES (v_txn_type, v_emp_id, v_current_time)
-            RETURNING id INTO v_txn_id;
+            RETURNING id
+                INTO v_txn_id;
 
-            IF v_txn_type = 'RECEIPT' THEN
+            IF
+                v_txn_type = 'RECEIPT' THEN
                 INSERT INTO DELIVERY_TRANSACTIONS (inventory_transactions_id, supplier_company, delivery_note)
                 VALUES (v_txn_id, 'Supplier_' || random_int(1, 1000), 'DN-' || v_txn_id);
-            ELSIF v_txn_type = 'SHIPMENT' THEN
+            ELSIF
+                v_txn_type = 'SHIPMENT' THEN
                 INSERT INTO SHIPMENT_TRANSACTIONS (inventory_transactions_id, shipment_number, destination_adress)
                 VALUES (v_txn_id, v_txn_id + 1000000, 'Address ' || random_int(1, 10000));
             END IF;
 
-            FOR m IN 1..v_num_movements LOOP
+            FOR m IN 1..v_num_movements
+                LOOP
                     v_success := FALSE;
-                    SELECT min(id), max(id) INTO v_min_inv, v_max_inv FROM INVENTORY;
+                    SELECT min(id), max(id)
+                    INTO v_min_inv, v_max_inv
+                    FROM INVENTORY;
 
-                    IF v_txn_type = 'RECEIPT' THEN
-                        SELECT id INTO v_var_id FROM PRODUCT_VARIANTS WHERE id >= random_bigint(v_min_var, v_max_var) LIMIT 1;
-                        SELECT id INTO v_to_bin FROM BINS WHERE id >= random_bigint(v_min_bin, v_max_bin) LIMIT 1;
-                        v_from_bin := NULL;
-                        v_qty := random_int(10, 10000);
+                    IF
+                        v_txn_type = 'RECEIPT' THEN
+                        SELECT id
+                        INTO v_var_id
+                        FROM PRODUCT_VARIANTS
+                        WHERE id >= random_bigint(v_min_var, v_max_var)
+                        LIMIT 1;
+                        SELECT id
+                        INTO v_to_bin
+                        FROM BINS
+                        WHERE id >= random_bigint(v_min_bin, v_max_bin)
+                        LIMIT 1;
+                        v_from_bin
+                            := NULL;
+                        v_qty
+                            := random_int(10, 10000);
 
-                        IF v_var_id IS NOT NULL AND v_to_bin IS NOT NULL THEN
+                        IF
+                            v_var_id IS NOT NULL AND v_to_bin IS NOT NULL THEN
                             -- Ensure the row exists so the trigger can update it without failing
-                            INSERT INTO INVENTORY (product_variant_id, bin_id, quantity, reserved_quantity, status, updated_at)
+                            INSERT INTO INVENTORY (product_variant_id, bin_id, quantity, reserved_quantity, status,
+                                                   updated_at)
                             VALUES (v_var_id, v_to_bin, 0, 0, 'AVAILABLE', v_current_time)
                             ON CONFLICT (product_variant_id, bin_id) DO NOTHING;
 
-                            v_success := TRUE;
+                            v_success
+                                := TRUE;
                         END IF;
 
-                    ELSIF v_txn_type = 'SHIPMENT' THEN
+                    ELSIF
+                        v_txn_type = 'SHIPMENT' THEN
                         SELECT product_variant_id, bin_id, quantity
                         INTO v_var_id, v_from_bin, v_qty_available
                         FROM INVENTORY
-                        WHERE id >= random_bigint(v_min_inv, v_max_inv) AND quantity > 0 LIMIT 1;
+                        WHERE id >= random_bigint(v_min_inv, v_max_inv)
+                          AND quantity > 0
+                        LIMIT 1;
 
-                        v_to_bin := NULL;
+                        v_to_bin
+                            := NULL;
 
-                        IF v_var_id IS NOT NULL THEN
+                        IF
+                            v_var_id IS NOT NULL THEN
                             v_qty := LEAST(random_int(1, 5000), v_qty_available);
-                            v_success := TRUE; -- No manual update, just set success to insert movement
+                            v_success
+                                := TRUE; -- No manual update, just set success to insert movement
                         END IF;
 
-                    ELSIF v_txn_type = 'TRANSFER' THEN
+                    ELSIF
+                        v_txn_type = 'TRANSFER' THEN
                         SELECT product_variant_id, bin_id, quantity
                         INTO v_var_id, v_from_bin, v_qty_available
                         FROM INVENTORY
-                        WHERE id >= random_bigint(v_min_inv, v_max_inv) AND quantity > 0 LIMIT 1;
+                        WHERE id >= random_bigint(v_min_inv, v_max_inv)
+                          AND quantity > 0
+                        LIMIT 1;
 
-                        SELECT id INTO v_to_bin FROM BINS
-                        WHERE id >= random_bigint(v_min_bin, v_max_bin) AND id <> COALESCE(v_from_bin, -1) LIMIT 1;
+                        SELECT id
+                        INTO v_to_bin
+                        FROM BINS
+                        WHERE id >= random_bigint(v_min_bin, v_max_bin)
+                          AND id <> COALESCE(v_from_bin, -1)
+                        LIMIT 1;
 
-                        IF v_var_id IS NOT NULL AND v_from_bin IS NOT NULL AND v_to_bin IS NOT NULL THEN
+                        IF
+                            v_var_id IS NOT NULL AND v_from_bin IS NOT NULL AND v_to_bin IS NOT NULL THEN
                             v_qty := LEAST(random_int(5, 2000), v_qty_available);
 
                             -- Ensure destination row exists for the trigger
-                            INSERT INTO INVENTORY (product_variant_id, bin_id, quantity, reserved_quantity, status, updated_at)
+                            INSERT INTO INVENTORY (product_variant_id, bin_id, quantity, reserved_quantity, status,
+                                                   updated_at)
                             VALUES (v_var_id, v_to_bin, 0, 0, 'AVAILABLE', v_current_time)
                             ON CONFLICT (product_variant_id, bin_id) DO NOTHING;
 
-                            v_success := TRUE;
+                            v_success
+                                := TRUE;
                         END IF;
                     END IF;
 
                     -- Insert Movement Record (This fires your trigger and updates INVENTORY)
-                    IF v_success THEN
+                    IF
+                        v_success THEN
                         -- We wrap this in a block in case the trigger fails for any edge-case reason
                         BEGIN
-                            INSERT INTO INVENTORY_MOVEMENTS (
-                                inventory_transactions_id, product_variant_id, from_bin_id, to_bin_id, quantity, created_at
-                            ) VALUES (
-                                         v_txn_id, v_var_id, v_from_bin, v_to_bin, v_qty, v_current_time
-                                     );
-                            v_movements_inserted := v_movements_inserted + 1;
+                            INSERT INTO INVENTORY_MOVEMENTS (inventory_transactions_id, product_variant_id, from_bin_id,
+                                                             to_bin_id, quantity,
+                                                             created_at)
+                            VALUES (v_txn_id, v_var_id, v_from_bin, v_to_bin, v_qty, v_current_time);
+                            v_movements_inserted
+                                := v_movements_inserted + 1;
 
-                            IF v_movements_inserted % 1000000 = 0 THEN
+                            IF
+                                v_movements_inserted % 1000000 = 0 THEN
                                 RAISE NOTICE 'Progress: % / % movements generated.', v_movements_inserted, p_target_movements;
                             END IF;
-                        EXCEPTION WHEN OTHERS THEN
-                        -- Skip movement if trigger constraints still fail
+                        EXCEPTION
+                            WHEN OTHERS THEN
+                            -- Skip movement if trigger constraints still fail
                         END;
                     END IF;
 
                 END LOOP;
 
-            IF v_txn_id % 5000 = 0 THEN
+            IF
+                v_txn_id % 5000 = 0 THEN
                 COMMIT;
             END IF;
 
         END LOOP;
 
     COMMIT;
-    RAISE NOTICE 'Successfully generated % inventory movements.', v_movements_inserted;
+    RAISE
+        NOTICE 'Successfully generated % inventory movements.', v_movements_inserted;
 END;
 $$;
 
