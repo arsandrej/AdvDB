@@ -1,7 +1,7 @@
 section_name,description
-Top Right,Primary receiving and intake section
-Top Left,Bulk storage for large pallets
-Right Center,Refrigerated and climate-controlled storage
-Left Center,High-value and secured goods section
-Bottom Right,Outbound staging and dispatch section
-Bottom Left,Returns processing and quality control section
+Top Right,Regular goods
+Top Left,Regular goods
+Right Center,Regular goods
+Left Center,Regular goods
+Bottom Right,Regular goods
+Bottom Left,Regular goods
