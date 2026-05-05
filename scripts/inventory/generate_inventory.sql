@@ -373,7 +373,7 @@ $$;
 -- 6. RUN (uncomment the appropriate line)
 -- =============================================================================
 -- Small test (10 000 movements over 1 year):
-CALL generate_inventory_history('2022-01-01', '2023-01-01', 1000);
+-- CALL generate_inventory_history('2022-01-01', '2023-01-01', 1000);
 
 -- Full 30‑million run (2 years):
---CALL generate_inventory_history('2022-01-01', '2023-12-31', 30000000);
+CALL generate_inventory_history('2020-01-01', '2026-01-01', 30000000);

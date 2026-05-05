@@ -15,9 +15,6 @@
 \echo 'Employee warehouse assignments'
 \ir employees/employee_warehouse_assignments_seed.sql
 
-\echo 'Large products'
-\ir products/large_products.sql
-
 \echo 'Transaction types'
 \ir inventory/transaction_type_seed.sql
 

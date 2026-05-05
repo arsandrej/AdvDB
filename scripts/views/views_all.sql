@@ -34,9 +34,9 @@ FROM product_categories pc
          JOIN categories c ON c.id = pc.category_id;
 
 --view all products in a category
-SELECT product_id, product_name, category_name
-FROM view_products_by_category
-WHERE category_id = 14
+SELECT vp.product_id, product_name, category_name, pv.sku
+FROM view_products_by_category vp JOIN product_variants pv on pv.product_id=vp.product_id
+WHERE category_id = 10
 ORDER BY product_name;
 
 
@@ -184,6 +184,8 @@ FROM view_transactions_full;
 --drop view view_variant_attributes;
 CREATE OR REPLACE VIEW view_variant_attributes AS
 SELECT pv.id    AS variant_id,
+       pv.brand_id,
+       p.name,
        pv.sku,
        pv.product_id,
        a.name   AS attribute_name,
@@ -194,11 +196,17 @@ FROM PRODUCT_VARIANTS pv
          JOIN VARIANT_ATTRIBUTES va ON va.product_variant_id = pv.id
          JOIN ATTRIBUTE_VALUES av ON av.id = va.attribute_value_id
     AND av.attribute_id = va.attribute_id
-         JOIN ATTRIBUTES a ON a.id = va.attribute_id;
+         JOIN ATTRIBUTES a ON a.id = va.attribute_id
+            JOIN products p on pv.product_id = p.id;
+
+SELECT *
+FROM view_variant_attributes vva join brands b on vva.brand_id=b.id
+-- ORDER BY variant_id;
+WHERE variant_id = 1 OR variant_id = 2;
 
 SELECT *
 FROM view_variant_attributes
-WHERE variant_id = 1;
+WHERE variant_id = 6;
 
 --12
 CREATE OR REPLACE VIEW view_inventory_value AS
