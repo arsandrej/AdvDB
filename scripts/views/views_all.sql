@@ -1,4 +1,5 @@
 --1
+-- View: Shows current stock per warehouse, product, and variant (total, reserved, available)
 CREATE OR REPLACE VIEW view_current_warehouse_stock AS
 SELECT w.id                                  AS warehouse_id,
        w.name                                AS warehouse_name,
@@ -23,6 +24,7 @@ FROM view_current_warehouse_stock
 WHERE warehouse_id = 14;
 
 --2
+-- View: Lists all products grouped by their categories
 CREATE OR REPLACE VIEW view_products_by_category AS
 SELECT c.id   AS category_id,
        c.name AS category_name,
@@ -39,9 +41,8 @@ FROM view_products_by_category vp JOIN product_variants pv on pv.product_id=vp.p
 WHERE category_id = 10
 ORDER BY product_name;
 
-
-
 --3
+-- View: Shows all variants for each product with detailed variant information
 CREATE OR REPLACE VIEW view_variants_per_product AS
 SELECT p.id   AS product_id,
        p.name AS product_name,
@@ -56,7 +57,7 @@ SELECT p.id   AS product_id,
 FROM product_variants pv
          JOIN products p ON p.id = pv.product_id;
 
---list all variants for a product
+
 SELECT product_name,
        variant_id,
        sku,
@@ -70,8 +71,41 @@ FROM view_variants_per_product
 WHERE product_id = 2348
 ORDER BY product_name;
 
+--10
+-- View: Lists all attributes and values assigned to each product variant
+--drop view view_variant_attributes;
+CREATE OR REPLACE VIEW view_variant_attributes AS
+SELECT pv.id    AS variant_id,
+       b.name,
+       p.name,
+       pv.sku,
+       pv.product_id,
+       a.name   AS attribute_name,
+       av.value AS attribute_value,
+       a.data_type,
+       a.unit,
+       pim.url
+FROM PRODUCT_VARIANTS pv
+         JOIN VARIANT_ATTRIBUTES va ON va.product_variant_id = pv.id
+         JOIN ATTRIBUTE_VALUES av ON av.id = va.attribute_value_id
+    AND av.attribute_id = va.attribute_id
+         JOIN ATTRIBUTES a ON a.id = va.attribute_id
+         JOIN products p on pv.product_id = p.id
+JOIN brands as b on pv.brand_id=b.id
+JOIN product_images as pim on pv.id = pim.product_variants_id;
+
+SELECT *
+FROM view_variant_attributes vva
+-- ORDER BY variant_id;
+WHERE variant_id = 1 OR variant_id = 2;
+
+SELECT *
+FROM view_variant_attributes
+WHERE variant_id = 6;
+
 
 --4
+-- View: Aggregates inventory quantities per product variant
 CREATE OR REPLACE VIEW view_inventory_summary AS
 SELECT product_variant_id,
        SUM(quantity)                     AS total_quantity,
@@ -85,6 +119,7 @@ FROM view_inventory_summary;
 
 
 --5
+-- View: Identifies product variants with low available stock (below threshold)
 CREATE OR REPLACE VIEW view_low_stock AS
 SELECT pv.sku, vis.*
 FROM view_inventory_summary vis
@@ -95,20 +130,38 @@ SELECT *
 FROM view_low_stock;
 
 --6
+-- View: Shows employees with their currently assigned warehouse and their manager
 CREATE OR REPLACE VIEW view_employee_current_warehouse AS
-SELECT e.id   AS employee_id,
-       w.name AS warehouse_name,
-       ewa.is_primary
-FROM EMPLOYEE_WAREHOUSE_ASSIGNMENTS ewa
-         JOIN EMPLOYEES e ON e.id = ewa.employee_id
-         JOIN WAREHOUSES w ON w.id = ewa.warehouse_id
-WHERE ewa.end_date IS NULL;
+SELECT
+    e.id AS employee_id,
+    e.employee_number,
+    e.first_name,
+    e.last_name,
+    e.job_title,
+    e.employment_status,
+    m.id AS manager_id,
+    m.first_name || ' ' || m.last_name AS manager_name,
+    w.id AS warehouse_id,
+    w.name AS warehouse_name,
+    ewa.is_primary,
+    ewa.start_date
+FROM employees e
+         LEFT JOIN employee_warehouse_assignments ewa
+                   ON ewa.employee_id = e.id
+                       AND ewa.end_date IS NULL
+                       AND ewa.is_primary = TRUE
 
-SELECT *
-FROM view_employee_current_warehouse;
+         LEFT JOIN warehouses w
+                   ON w.id = ewa.warehouse_id
+
+         LEFT JOIN employees m
+                   ON m.id = e.manager_id
+
+WHERE e.terminated_at IS NULL;
 
 --7
-drop view view_employee_permissions;
+-- View: Lists employee roles and their associated permissions
+--drop view view_employee_permissions;
 CREATE OR REPLACE VIEW view_employee_permissions AS
 SELECT e.first_name || ' ' || e.last_name AS employee_full_name,
        e.id                               AS employee_id,
@@ -124,25 +177,9 @@ SELECT *
 FROM view_employee_permissions
 WHERE employee_id = 22;
 
+
 --8
--- drop view view_employees_with_manager;
-CREATE OR REPLACE VIEW view_employees_with_manager AS
-SELECT e.id,
-       e.first_name,
-       e.last_name,
-       e.job_title,
-       e.employment_status,
-       m.first_name || ' ' || m.last_name AS manager_name,
-       e.manager_id                       as manager
-FROM EMPLOYEES e
-         LEFT JOIN EMPLOYEES m ON m.id = e.manager_id;
-
-SELECT *
-FROM view_employees_with_manager
-where manager = 4;
-
-
---9
+-- View: Detailed inventory movement records including bins and responsible employee
 CREATE OR REPLACE VIEW view_inventory_movements_detailed AS
 SELECT im.id,
        im.product_variant_id,
@@ -161,7 +198,8 @@ FROM INVENTORY_MOVEMENTS im
 SELECT *
 FROM view_inventory_movements_detailed;
 
---10
+--9
+-- View: Combines all transaction types with related delivery and shipment details
 CREATE OR REPLACE VIEW view_transactions_full AS
 SELECT it.id,
        it.transaction_type,
@@ -180,35 +218,10 @@ FROM INVENTORY_TRANSACTIONS it
 SELECT *
 FROM view_transactions_full;
 
+
+
 --11
---drop view view_variant_attributes;
-CREATE OR REPLACE VIEW view_variant_attributes AS
-SELECT pv.id    AS variant_id,
-       pv.brand_id,
-       p.name,
-       pv.sku,
-       pv.product_id,
-       a.name   AS attribute_name,
-       av.value AS attribute_value,
-       a.data_type,
-       a.unit
-FROM PRODUCT_VARIANTS pv
-         JOIN VARIANT_ATTRIBUTES va ON va.product_variant_id = pv.id
-         JOIN ATTRIBUTE_VALUES av ON av.id = va.attribute_value_id
-    AND av.attribute_id = va.attribute_id
-         JOIN ATTRIBUTES a ON a.id = va.attribute_id
-            JOIN products p on pv.product_id = p.id;
-
-SELECT *
-FROM view_variant_attributes vva join brands b on vva.brand_id=b.id
--- ORDER BY variant_id;
-WHERE variant_id = 1 OR variant_id = 2;
-
-SELECT *
-FROM view_variant_attributes
-WHERE variant_id = 6;
-
---12
+-- View: Calculates available inventory value per product variant
 CREATE OR REPLACE VIEW view_inventory_value AS
 SELECT pv.id                                            AS variant_id,
        pv.sku,
@@ -222,6 +235,9 @@ GROUP BY pv.id, pv.sku, pv.price;
 SELECT *
 FROM view_inventory_value;
 
+
+--12
+--View: Builds a hierarchical category tree with depth and full path (breadcrumb)
 CREATE OR REPLACE VIEW view_category_tree AS
 WITH RECURSIVE tree AS (SELECT c.id,
                                c.parent_id,
@@ -252,32 +268,3 @@ COMMENT
 SELECT *
 FROM view_category_tree;
 
---drop view view_active_employees;
-CREATE OR REPLACE VIEW view_active_employees AS
-SELECT e.id                             AS employee_id,
-       w.name                           as warehouse_name,
-       e.employee_number,
-       e.first_name,
-       e.last_name,
-       e.email,
-       e.phone,
-       e.job_title,
-       e.employment_status,
-       e.hired_at,
-       COUNT(DISTINCT ewa.warehouse_id) AS current_warehouse_count,
-       COUNT(DISTINCT re.roles_id)      AS role_count
-FROM employees e
-         LEFT JOIN employee_warehouse_assignments ewa
-                   ON ewa.employee_id = e.id
-                       AND ewa.end_date IS NULL
-         LEFT JOIN roles_employees re ON re.employees_id = e.id
-         JOIN warehouses w ON ewa.warehouse_id = w.id
-WHERE e.terminated_at IS NULL
-GROUP BY e.id, e.employee_number, e.first_name, e.last_name, e.email, e.phone,
-         e.job_title, e.employment_status, e.hired_at, w.name;
-COMMENT
-    ON VIEW view_active_employees IS 'Currently active employees with warehouse and role coverage counts.';
-
-SELECT *
-FROM view_active_employees
-where warehouse_name = 'Axis Storage Facility';

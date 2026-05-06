@@ -22,17 +22,20 @@ FROM tree;
 
 
 -- =========================================================
--- 2. PRODUCTS BY CATEGORY
+-- 2. PRODUCT VARIENTS BY CATEGORY
 -- =========================================================
 CREATE OR REPLACE VIEW view_products_by_category AS
 SELECT c.id AS category_id,
        c.name AS category_name,
        p.id AS product_id,
        p.name AS product_name,
+       pv.sku AS product_variant,
+       pv.id AS variant_id,
        p.description
 FROM product_categories pc
          JOIN products p ON p.id = pc.product_id
-         JOIN categories c ON c.id = pc.category_id;
+         JOIN categories c ON c.id = pc.category_id
+        JOIN product_variants as pv ON pv.product_id = p.id ;
 
 
 -- =========================================================
@@ -55,7 +58,8 @@ FROM product_variants pv
 
 
 -- =========================================================
--- 4. VARIANT ATTRIBUTES (RAW)
+--TODO:
+-- 4. VARIANT ATTRIBUTES (RAW) make detailed + brand..
 -- =========================================================
 CREATE OR REPLACE VIEW view_variant_attributes AS
 SELECT pv.id AS variant_id,
@@ -85,7 +89,7 @@ GROUP BY product_variant_id;
 
 
 -- =========================================================
--- 6. VARIANT STOCK STATUS (CORE LOGIC)
+-- 6. CURRENT VARIANT STOCK STATUS
 -- =========================================================
 CREATE OR REPLACE VIEW view_variant_stock_status AS
 SELECT pv.id AS variant_id,
@@ -190,7 +194,7 @@ FROM inventory_movements im
 
 
 -- =========================================================
--- 11. EMPLOYEE CURRENT WAREHOUSE MANS=AGER AND CURRENT PRIMARY WAREHOUSE ASSIGNMENT
+-- 11. EMPLOYEE CURRENT WAREHOUSE MANAGER AND CURRENT PRIMARY WAREHOUSE ASSIGNMENT
 -- =========================================================
 CREATE OR REPLACE VIEW view_employee_current_warehouse AS
 SELECT
@@ -223,7 +227,6 @@ FROM employees e
          LEFT JOIN warehouses w
                    ON w.id = ewa.warehouse_id
 
--- manager join
          LEFT JOIN employees m
                    ON m.id = e.manager_id
 
@@ -243,5 +246,44 @@ FROM employees e
          JOIN roles r ON r.id = re.roles_id
          JOIN permissions_roles pr ON pr.roles_id = r.id
          JOIN permissions p ON p.id = pr.permissions_id;
+
+
+
+
+
+
+
+--drop view view_active_employees;
+CREATE OR REPLACE VIEW view_active_employees AS
+SELECT e.id                             AS employee_id,
+       w.name                           as warehouse_name,
+       e.employee_number,
+       e.first_name,
+       e.last_name,
+       e.email,
+       e.phone,
+       e.job_title,
+       e.employment_status,
+       e.hired_at,
+       COUNT(DISTINCT ewa.warehouse_id) AS current_warehouse_count,
+       COUNT(DISTINCT re.roles_id)      AS role_count
+FROM employees e
+         LEFT JOIN employee_warehouse_assignments ewa
+                   ON ewa.employee_id = e.id
+                       AND ewa.end_date IS NULL
+         LEFT JOIN roles_employees re ON re.employees_id = e.id
+         JOIN warehouses w ON ewa.warehouse_id = w.id
+WHERE e.terminated_at IS NULL
+GROUP BY e.id, e.employee_number, e.first_name, e.last_name, e.email, e.phone,
+         e.job_title, e.employment_status, e.hired_at, w.name;
+COMMENT
+    ON VIEW view_active_employees IS 'Currently active employees with warehouse and role coverage counts.';
+
+SELECT *
+FROM view_active_employees
+where warehouse_name = 'Axis Storage Facility';
+
+
+
 
 COMMIT;
