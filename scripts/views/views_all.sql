@@ -293,7 +293,7 @@ WHERE transaction_type = 'TRANSFER';
 ANALYZE inventory_transactions;
 ANALYZE inventory_movements;
 --9
--- View: Combines all transaction types with related delivery and shipment details
+-- View: Combines all transaction types with related delivery and shipment details TODO: CHECK VALIDITY
 CREATE OR REPLACE VIEW view_transactions_full AS
 SELECT it.id,
        it.transaction_type,
@@ -361,16 +361,14 @@ FROM view_variant_details;
 
 SELECT *
 FROM view_variant_details
-where variant_id = 291589;
--- ORDER BY variant_id;
--- WHERE variant_id = 1 OR variant_id = 2;
+where variant_id = 291588;
 
 SELECT *
 FROM view_variant_details
 WHERE variant_id = 6;
 
 --11
--- View: Calculates available inventory value per product variant
+-- View: Calculates available inventory value per product variant TODO: CHECK VALIDITY
 CREATE OR REPLACE VIEW view_inventory_value AS
 SELECT pv.id                                            AS variant_id,
        pv.sku,
@@ -420,3 +418,7 @@ FROM tree;
 SELECT *
 FROM view_category_tree;
 
+
+SELECT *
+FROM view_category_tree
+WHERE category_id=8;
