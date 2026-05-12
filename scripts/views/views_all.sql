@@ -1,25 +1,6 @@
 --1
 -- View: Shows current stock per warehouse, product, and variant (total, reserved, available)
-CREATE OR REPLACE VIEW view_current_warehouse_stock AS
-SELECT w.id                                  AS warehouse_id,
-       w.name                                AS warehouse_name,
-       p.id                                  AS product_id,
-       p.name                                AS product_name,
-       pv.id                                 AS variant_id,
-       pv.sku,
-       SUM(i.quantity)                       AS total_quantity,
-       SUM(i.reserved_quantity)              AS reserved_quantity,
-       SUM(i.quantity - i.reserved_quantity) AS available_quantity
-FROM inventory i
-         JOIN bins b ON b.id = i.bin_id
-         JOIN product_variants pv ON pv.id = i.product_variant_id
-         JOIN products p ON p.id = pv.product_id
-         JOIN locations l ON l.id = b.location_id
-         JOIN sections s ON s.id = l.section_id
-         JOIN warehouses w ON w.id = s.warehouse_id
-GROUP BY w.id, w.name, p.id, p.name, pv.id, pv.sku;
-drop view view_current_warehouse_stock;
-
+-- drop view view_current_warehouse_stock;
 CREATE OR REPLACE VIEW view_current_warehouse_stock AS
 SELECT agg.warehouse_id,
        w.name AS warehouse_name,
@@ -83,8 +64,6 @@ WHERE product_id = 2;
 SELECT *
 FROM view_current_warehouse_stock
 WHERE variant_id = 10000;
-
-
 
 --2
 CREATE OR REPLACE VIEW view_category_descendants AS
@@ -252,7 +231,7 @@ SELECT *
 FROM view_employee_permissions;
 
 
---7
+-- 7
 -- View: Detailed inventory movement records including bins and responsible employee
 -- drop view view_inventory_movements_detailed;
 CREATE OR REPLACE VIEW view_inventory_movements_detailed AS
@@ -292,42 +271,8 @@ WHERE transaction_type = 'TRANSFER';
 
 ANALYZE inventory_transactions;
 ANALYZE inventory_movements;
---9
--- View: Combines all transaction types with related delivery and shipment details TODO: CHECK VALIDITY
-CREATE OR REPLACE VIEW view_transactions_full AS
-SELECT it.id,
-       it.transaction_type,
-       it.created_at,
-       e.first_name || ' ' || e.last_name AS created_by,
-       dt.supplier_company,
-       NULL::bigint                       AS shipment_number,
-       NULL::text                         AS destination_address
-FROM inventory_transactions it
-         JOIN employees e ON e.id = it.created_by_employee
-         LEFT JOIN delivery_transactions dt ON dt.inventory_transactions_id = it.id
-WHERE it.transaction_type IN ('TRANSFER', 'RECEIPT')
 
-UNION ALL
-
-SELECT it.id,
-       it.transaction_type,
-       it.created_at,
-       e.first_name || ' ' || e.last_name AS created_by,
-       NULL::text                         AS supplier_company,
-       st.shipment_number,
-       st.destination_adress
-FROM inventory_transactions it
-         JOIN employees e ON e.id = it.created_by_employee
-         LEFT JOIN shipment_transactions st ON st.inventory_transactions_id = it.id
-WHERE it.transaction_type = 'SHIPMENT';
-
--- drop view view_transactions_full;
-
-SELECT *
-FROM view_transactions_full
-WHERE transaction_type = 'SHIPMENT';
-
---10
+--8
 -- View: Lists all attributes and values assigned to each product variant
 drop view view_variant_details;
 
@@ -367,28 +312,7 @@ SELECT *
 FROM view_variant_details
 WHERE variant_id = 6;
 
---11
--- View: Calculates available inventory value per product variant TODO: CHECK VALIDITY
-CREATE OR REPLACE VIEW view_inventory_value AS
-SELECT pv.id                                            AS variant_id,
-       pv.sku,
-       pv.price,
-       SUM(i.quantity - i.reserved_quantity)            AS available_qty,
-       SUM(i.quantity - i.reserved_quantity) * pv.price AS available_value
-FROM PRODUCT_VARIANTS pv
-         JOIN INVENTORY i ON i.product_variant_id = pv.id
-GROUP BY pv.id, pv.sku, pv.price;
-
-SELECT *
-FROM view_inventory_value
-WHERE available_qty <10;
-
-SELECT *
-FROM view_inventory_value
-WHERE variant_id = 10000;
-
-
---12
+--9
 --View: Builds a hierarchical category tree with depth and full path (breadcrumb)
 CREATE OR REPLACE VIEW view_category_tree AS
 WITH RECURSIVE tree AS (SELECT c.id,
@@ -418,7 +342,6 @@ FROM tree;
 SELECT *
 FROM view_category_tree;
 
-
 SELECT *
 FROM view_category_tree
-WHERE category_id=8;
+WHERE category_id = 8;

@@ -11,3 +11,6 @@ CREATE INDEX idx_im_created_at
     ON inventory_movements (created_at);
 drop index idx_im_created_at;
 
+ANALYZE inventory_transactions;
+ANALYZE inventory_movements;
+ANALYZE inventory;
