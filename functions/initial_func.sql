@@ -418,3 +418,158 @@ FROM VARIANT_ATTRIBUTES
 WHERE product_variant_id = p_variant_id
   AND attribute_value_id = p_attribute_value_id;
 $$ LANGUAGE sql;
+
+-- =================================================================
+-- --===== soft delete variant procedure
+-- ====================================================================
+
+CREATE OR REPLACE PROCEDURE discontinue_variant(
+    p_variant_id BIGINT
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_current_status  VARCHAR(50);
+    v_sku             VARCHAR(63);
+    v_reserved_bins   INT;
+BEGIN
+    -- Check variant exists
+    SELECT status, sku
+    INTO   v_current_status, v_sku
+    FROM   PRODUCT_VARIANTS
+    WHERE  id = p_variant_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Variant with id=% does not exist', p_variant_id;
+    END IF;
+
+    -- Already discontinued — nothing to do
+    IF v_current_status = 'discontinued' THEN
+        RAISE NOTICE 'Variant id=% (sku=%) is already discontinued — no change made',
+            p_variant_id, v_sku;
+        RETURN;
+    END IF;
+
+    -- Discontinue the variant
+    UPDATE PRODUCT_VARIANTS
+    SET    status = 'discontinued'
+    WHERE  id     = p_variant_id;
+
+    -- Clear reserved_quantity across all bins for this variant
+    -- Reserved stock can't be fulfilled on a discontinued item
+    SELECT COUNT(*)
+    INTO   v_reserved_bins
+    FROM   INVENTORY
+    WHERE  product_variant_id = p_variant_id
+      AND  reserved_quantity  > 0;
+
+    IF v_reserved_bins > 0 THEN
+        UPDATE INVENTORY
+        SET    reserved_quantity = 0,
+               updated_at       = CURRENT_TIMESTAMP
+        WHERE  product_variant_id = p_variant_id
+          AND  reserved_quantity  > 0;
+
+        RAISE NOTICE 'Cleared reserved_quantity in % bin(s) for variant id=% (sku=%)',
+            v_reserved_bins, p_variant_id, v_sku;
+    END IF;
+
+    RAISE NOTICE 'Variant id=% (sku=%) has been discontinued', p_variant_id, v_sku;
+END;
+$$;
+
+-- =================================================================
+-- --===== soft delete product procedure
+-- ====================================================================
+
+CREATE OR REPLACE PROCEDURE discontinue_product(
+    p_product_id BIGINT
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_product_name   VARCHAR(63);
+    v_total_variants INT;
+    v_already_disc   INT;
+    v_variant_id     BIGINT;
+BEGIN
+    -- Check product exists
+    SELECT name INTO v_product_name
+    FROM   PRODUCTS
+    WHERE  id = p_product_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Product with id=% does not exist', p_product_id;
+    END IF;
+
+    -- Count variants
+    SELECT COUNT(*),
+           COUNT(*) FILTER (WHERE status = 'discontinued')
+    INTO   v_total_variants, v_already_disc
+    FROM   PRODUCT_VARIANTS
+    WHERE  product_id = p_product_id;
+
+    IF v_total_variants = 0 THEN
+        RAISE NOTICE 'Product id=% (%) has no variants — nothing to discontinue',
+            p_product_id, v_product_name;
+        RETURN;
+    END IF;
+
+    IF v_total_variants = v_already_disc THEN
+        RAISE NOTICE 'Product id=% (%) — all % variant(s) already discontinued — no change made',
+            p_product_id, v_product_name, v_total_variants;
+        RETURN;
+    END IF;
+
+    -- Call discontinue_variant for each active variant so reserved_quantity
+    -- clearing logic is reused and notices are raised per variant
+    FOR v_variant_id IN
+        SELECT id FROM PRODUCT_VARIANTS
+        WHERE  product_id = p_product_id
+          AND  status    <> 'discontinued'
+    LOOP
+        CALL discontinue_variant(v_variant_id);
+    END LOOP;
+
+    RAISE NOTICE 'Product id=% ("%") — % of % variant(s) discontinued (% were already discontinued)',
+        p_product_id, v_product_name,
+        v_total_variants - v_already_disc,
+        v_total_variants,
+        v_already_disc;
+END;
+$$;
+
+-- =========================================================================
+-- ========== trigger block discontinued movements
+-- ==========================================================================
+
+CREATE OR REPLACE FUNCTION fn_block_discontinued_movement()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_status VARCHAR(50);
+    v_sku    VARCHAR(63);
+BEGIN
+    SELECT status, sku
+    INTO   v_status, v_sku
+    FROM   PRODUCT_VARIANTS
+    WHERE  id = NEW.product_variant_id;
+
+    IF v_status = 'discontinued' THEN
+        RAISE EXCEPTION
+            'Cannot record movement for discontinued variant id=% (sku=%). '
+            'Reactivate the variant first if this movement is intentional.',
+            NEW.product_variant_id, v_sku;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_block_discontinued_movement ON INVENTORY_MOVEMENTS;
+
+CREATE TRIGGER trg_block_discontinued_movement
+BEFORE INSERT ON INVENTORY_MOVEMENTS
+FOR EACH ROW
+EXECUTE FUNCTION fn_block_discontinued_movement();
