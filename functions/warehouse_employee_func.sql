@@ -7,8 +7,8 @@ CREATE
     OR REPLACE FUNCTION create_warehouse(
     p_name TEXT,
     p_address TEXT DEFAULT NULL,
-    p_city TEXT,
-    p_country TEXT
+    p_city TEXT DEFAULT 'C',
+    p_country TEXT DEFAULT 'C'
 )
     RETURNS BIGINT AS
 $$
@@ -23,8 +23,8 @@ CREATE
     p_id BIGINT,
     p_name TEXT,
     p_address TEXT DEFAULT NULL,
-    p_city TEXT,
-    p_country TEXT
+    p_city TEXT DEFAULT 'C',
+    p_country TEXT DEFAULT 'C'
 )
     RETURNS VOID AS
 $$
@@ -145,7 +145,7 @@ CREATE
     p_last_name TEXT,
     p_email TEXT,
     p_phone TEXT DEFAULT NULL,
-    p_job_title TEXT,
+    p_job_title TEXT DEFAULT 'Job',
     p_employment_status TEXT DEFAULT 'ACTIVE',
     p_hired_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     p_manager_id BIGINT DEFAULT NULL
@@ -168,8 +168,8 @@ CREATE
     p_last_name TEXT,
     p_email TEXT,
     p_phone TEXT DEFAULT NULL,
-    p_job_title TEXT,
-    p_employment_status TEXT,
+    p_job_title TEXT DEFAULT 'Job',
+    p_employment_status TEXT DEFAULT 'active',
     p_manager_id BIGINT DEFAULT NULL
 )
     RETURNS VOID AS

@@ -47,7 +47,7 @@ SELECT update_employee(2, 'Jane', 'Smith-Doe', 'jane.smith@example.com',
 SELECT assign_employee_to_warehouse(2, 1, CURRENT_DATE, NULL, TRUE, 'Primary assignment') AS assign_id;
 
 -- 13. End that assignment
-SELECT end_warehouse_assignment(3, CURRENT_DATE + 30);
+SELECT end_warehouse_assignment(1, CURRENT_DATE + 30);
 
 -- 14. Role & Permission management
 INSERT INTO ROLES (name)
