@@ -362,7 +362,7 @@ CREATE OR REPLACE FUNCTION create_product_variant(
     p_sku TEXT,
     p_brand_id BIGINT,
     p_barcode TEXT DEFAULT NULL,
-    p_price NUMERIC(10, 2),
+    p_price NUMERIC(10, 2) DEFAULT 20,
     p_weight NUMERIC(10, 2) DEFAULT NULL,
     p_status TEXT DEFAULT 'ACTIVE'
 )
@@ -378,7 +378,7 @@ CREATE OR REPLACE FUNCTION update_product_variant(
     p_sku TEXT,
     p_brand_id BIGINT,
     p_barcode TEXT DEFAULT NULL,
-    p_price NUMERIC(10, 2),
+    p_price NUMERIC(10, 2) DEFAULT 20,
     p_weight NUMERIC(10, 2) DEFAULT NULL,
     p_status TEXT DEFAULT 'ACTIVE'
 )
@@ -494,7 +494,7 @@ $$;
 -- ======= Procedure for soft delete/discontinue product ==============
 -- ==== Changes status to discontinued on all variants of a product ===
 -- ====================================================================
-
+--TODO: nema potreba od ova
 CREATE OR REPLACE PROCEDURE discontinue_product(
     p_product_id BIGINT
 )
@@ -556,7 +556,9 @@ $$;
 -- =========================================================================
 -- === Trigger that blocks inventory movements on discontinued variants ===
 -- =========================================================================
-
+-- ========== trigger block discontinued movements
+-- ==========================================================================
+--TODO: dali sakame sepak da pravime movements na discontinued product variant
 CREATE OR REPLACE FUNCTION fn_block_discontinued_movement()
 RETURNS TRIGGER
 LANGUAGE plpgsql
