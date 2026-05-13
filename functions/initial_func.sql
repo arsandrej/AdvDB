@@ -362,7 +362,7 @@ CREATE OR REPLACE FUNCTION create_product_variant(
     p_sku TEXT,
     p_brand_id BIGINT,
     p_barcode TEXT DEFAULT NULL,
-    p_price NUMERIC(10, 2),
+    p_price NUMERIC(10, 2) DEFAULT 20,
     p_weight NUMERIC(10, 2) DEFAULT NULL,
     p_status TEXT DEFAULT 'ACTIVE'
 )
@@ -378,7 +378,7 @@ CREATE OR REPLACE FUNCTION update_product_variant(
     p_sku TEXT,
     p_brand_id BIGINT,
     p_barcode TEXT DEFAULT NULL,
-    p_price NUMERIC(10, 2),
+    p_price NUMERIC(10, 2) DEFAULT 20,
     p_weight NUMERIC(10, 2) DEFAULT NULL,
     p_status TEXT DEFAULT 'ACTIVE'
 )
@@ -457,7 +457,7 @@ BEGIN
 
     -- Clear reserved_quantity across all bins for this variant
     -- Reserved stock can't be fulfilled on a discontinued item
-    SELECT COUNT(*)
+    SELECT COUNT(*) --TODO: dali voopshto treba ova ako e nekoj product_variant discontinued dali seushte go prodavame
     INTO   v_reserved_bins
     FROM   INVENTORY
     WHERE  product_variant_id = p_variant_id
@@ -481,7 +481,7 @@ $$;
 -- =================================================================
 -- --===== soft delete product procedure
 -- ====================================================================
-
+--TODO: nema potreba od ova
 CREATE OR REPLACE PROCEDURE discontinue_product(
     p_product_id BIGINT
 )
@@ -542,7 +542,7 @@ $$;
 -- =========================================================================
 -- ========== trigger block discontinued movements
 -- ==========================================================================
-
+--TODO: dali sakame sepak da pravime movements na discontinued product variant
 CREATE OR REPLACE FUNCTION fn_block_discontinued_movement()
 RETURNS TRIGGER
 LANGUAGE plpgsql
