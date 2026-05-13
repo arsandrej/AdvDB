@@ -419,21 +419,29 @@ WHERE product_variant_id = p_variant_id
   AND attribute_value_id = p_attribute_value_id;
 $$ LANGUAGE sql;
 
--- ====================================================================
--- ======= Procedure for soft delete/discontinuing variant ============
--- ======= Changes status to discontinued on one variant ==============
--- ====================================================================
 
-CREATE OR REPLACE PROCEDURE discontinue_variant(
-    p_variant_id BIGINT
+-- ====================================================================
+-- ====================================================================
+-- Sets variant status
+-- ====================================================================
+CREATE OR REPLACE PROCEDURE set_variant_status(
+    p_variant_id BIGINT,
+    p_new_status VARCHAR(50)
 )
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    v_current_status  VARCHAR(50);
-    v_sku             VARCHAR(63);
-    v_reserved_bins   INT;
+    v_current_status VARCHAR(50);
+    v_sku            VARCHAR(63);
+    v_reserved_bins  INT;
 BEGIN
+    -- Validate status value
+    IF p_new_status NOT IN ('active', 'pre-order', 'discontinued') THEN
+        RAISE EXCEPTION
+            'Invalid status "%". Must be "active", "pre-order", or "discontinued".',
+            p_new_status;
+    END IF;
+
     -- Check variant exists
     SELECT status, sku
     INTO   v_current_status, v_sku
@@ -444,40 +452,41 @@ BEGIN
         RAISE EXCEPTION 'Variant with id=% does not exist', p_variant_id;
     END IF;
 
-    -- Already discontinued — nothing to do
-    IF v_current_status = 'discontinued' THEN
-        RAISE NOTICE 'Variant id=% (sku=%) is already discontinued — no change made',
-            p_variant_id, v_sku;
+    -- Already at requested status — nothing to do
+    IF v_current_status = p_new_status THEN
+        RAISE NOTICE 'Variant id=% (sku=%) is already "%" — no change made',
+            p_variant_id, v_sku, p_new_status;
         RETURN;
     END IF;
 
-    -- Discontinue the variant
+    -- Update the status
     UPDATE PRODUCT_VARIANTS
-    SET    status = 'discontinued'
+    SET    status = p_new_status
     WHERE  id     = p_variant_id;
 
-    -- Clear reserved_quantity across all bins for this variant
+    -- If discontinuing, clear reserved_quantity across all bins
     -- Reserved stock can't be fulfilled on a discontinued item
-    SELECT COUNT(*)
-    INTO   v_reserved_bins
-    FROM   INVENTORY
-    WHERE  product_variant_id = p_variant_id
-      AND  reserved_quantity  > 0;
-
-    -- If there is a bin where reserved quantity >0 for that variant
-    IF v_reserved_bins > 0 THEN
-        UPDATE INVENTORY
-        SET    reserved_quantity = 0,
-               updated_at       = CURRENT_TIMESTAMP
+    IF p_new_status = 'discontinued' THEN
+        SELECT COUNT(*)
+        INTO   v_reserved_bins
+        FROM   INVENTORY
         WHERE  product_variant_id = p_variant_id
           AND  reserved_quantity  > 0;
 
-        RAISE NOTICE 'Cleared reserved_quantity in % bin(s) for variant id=% (sku=%)',
-            v_reserved_bins, p_variant_id, v_sku;
+        IF v_reserved_bins > 0 THEN
+            UPDATE INVENTORY
+            SET    reserved_quantity = 0,
+                   updated_at       = CURRENT_TIMESTAMP
+            WHERE  product_variant_id = p_variant_id
+              AND  reserved_quantity  > 0;
+
+            RAISE NOTICE 'Cleared reserved_quantity in % bin(s) for variant id=% (sku=%)',
+                v_reserved_bins, p_variant_id, v_sku;
+        END IF;
     END IF;
 
-    RAISE NOTICE 'Status of variant id=% (sku=%) has changed from "%" to "discontinued"',
-    p_variant_id, v_sku, v_current_status;
+    RAISE NOTICE 'Status of variant id=% (sku=%) has changed from "%" to "%"',
+        p_variant_id, v_sku, v_current_status, p_new_status;
 END;
 $$;
 
@@ -528,11 +537,11 @@ BEGIN
     -- Call discontinue_variant for each active variant for our product
     -- clearing logic is reused and notices are raised per variant
     FOR v_variant_id IN
-        SELECT id FROM PRODUCT_VARIANTS
-        WHERE  product_id = p_product_id
-          AND  status    <> 'discontinued'
+    SELECT id FROM PRODUCT_VARIANTS
+    WHERE  product_id = p_product_id
+      AND  status    <> 'discontinued'
     LOOP
-        CALL discontinue_variant(v_variant_id);
+    CALL set_variant_status(v_variant_id, 'discontinued');
     END LOOP;
 
     RAISE NOTICE 'Product id=% ("%") — % of % variant(s) discontinued (% were already discontinued)',
@@ -543,59 +552,6 @@ BEGIN
 END;
 $$;
 
--- ========================================================================================
--- Sets variant status
--- calls discontinue_variant if discontinue
--- ========================================================================================
-CREATE OR REPLACE PROCEDURE set_variant_status(
-    p_variant_id BIGINT,
-    p_new_status VARCHAR(50)
-)
-LANGUAGE plpgsql
-AS $$
-DECLARE
-    v_current_status VARCHAR(50);
-    v_sku            VARCHAR(63);
-BEGIN
-    -- Validate status value — discontinuing must go through discontinue_variant
-    -- so that reserved_quantity is properly cleared
-    IF p_new_status NOT IN ('active', 'pre-order', 'discontinued') THEN
-    RAISE EXCEPTION
-        'Invalid status "%". Must be "active", "pre-order", or "discontinued".',
-        p_new_status;
-    END IF;
-
-    -- Route discontinuing through discontinue_variant so reserved_quantity is cleared
-    IF p_new_status = 'discontinued' THEN
-    CALL discontinue_variant(p_variant_id);
-    RETURN;
-    END IF;
-
-    -- Check variant exists
-    SELECT status, sku
-    INTO   v_current_status, v_sku
-    FROM   PRODUCT_VARIANTS
-    WHERE  id = p_variant_id;
-
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Variant with id=% does not exist', p_variant_id;
-    END IF;
-
-    -- Already at requested status — nothing to do
-    IF v_current_status = p_new_status THEN
-        RAISE NOTICE 'Variant id=% (sku=%) is already "%" — no change made',
-            p_variant_id, v_sku, p_new_status;
-        RETURN;
-    END IF;
-
-    UPDATE PRODUCT_VARIANTS
-    SET    status = p_new_status
-    WHERE  id     = p_variant_id;
-
-    RAISE NOTICE 'Status of variant id=% (sku=%) has changed from "%" to "%"',
-        p_variant_id, v_sku, v_current_status, p_new_status;
-END;
-$$;
 
 -- =========================================================================
 -- === Trigger that blocks inventory movements on discontinued variants ===
@@ -631,3 +587,4 @@ CREATE TRIGGER trg_block_discontinued_movement
 BEFORE INSERT ON INVENTORY_MOVEMENTS
 FOR EACH ROW
 EXECUTE FUNCTION fn_block_discontinued_movement();
+
