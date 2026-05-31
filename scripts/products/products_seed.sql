@@ -1,432 +1,466 @@
-BEGIN;
+-- ============================================================================
+-- TABLE: CATEGORIES (apparel only)
+-- ============================================================================
 
--- ------------------------------------------------------------
--- 1. BRANDS  (6 clothing brands)
--- ------------------------------------------------------------
-INSERT INTO BRANDS (name)
-VALUES ('Nike'),
-       ('Adidas'),
-       ('Levi''s'),
-       ('Zara'),
-       ('H&M'),
-       ('Uniqlo');
+INSERT INTO categories (name, parent_id)
+VALUES ('goods', NULL);
 
+INSERT INTO categories (name, parent_id)
+VALUES ('apparel', (SELECT id FROM categories WHERE name = 'goods'));
 
--- ------------------------------------------------------------
--- 2. CATEGORIES  (3-level hierarchy)
---
---  Level 0:  Clothing
---  Level 1:  Men's Clothing · Women's Clothing · Kids' Clothing
---  Level 2:  T-Shirts · Jeans · Jackets · Hoodies & Sweatshirts ·
---            Knitwear · Trousers  (under Men's)
---            Dresses · Tops & Blouses · Jeans · Knitwear  (under Women's)
--- ------------------------------------------------------------
+INSERT INTO categories (name, parent_id)
+SELECT 'clothing', id FROM categories WHERE name = 'apparel';
 
--- Level 0: single root
-INSERT INTO CATEGORIES (name, parent_id)
-VALUES ('Clothing', NULL);
+INSERT INTO categories (name, parent_id)
+SELECT 'tops', id FROM categories WHERE name = 'clothing'
+UNION ALL
+SELECT 'bottoms', id FROM categories WHERE name = 'clothing'
+UNION ALL
+SELECT 'outerwear', id FROM categories WHERE name = 'clothing'
+UNION ALL
+SELECT 'underwear', id FROM categories WHERE name = 'clothing';
 
--- Level 1: direct children of Clothing
-INSERT INTO CATEGORIES (name, parent_id)
-SELECT v.name, root.id
-FROM (VALUES ('Men''s Clothing'),
-             ('Women''s Clothing'),
-             ('Kids'' Clothing')) AS v(name)
-         CROSS JOIN (SELECT id
-                     FROM CATEGORIES
-                     WHERE name = 'Clothing' AND parent_id IS NULL) AS root;
+INSERT INTO categories (name, parent_id)
+SELECT 'pants', id FROM categories WHERE name = 'bottoms'
+UNION ALL
+SELECT 'skirts', id FROM categories WHERE name = 'bottoms'
+UNION ALL
+SELECT 'tshirts', id FROM categories WHERE name = 'tops'
+UNION ALL
+SELECT 'shirts', id FROM categories WHERE name = 'tops'
+UNION ALL
+SELECT 'jackets', id FROM categories WHERE name = 'outerwear'
+UNION ALL
+SELECT 'hoodies', id FROM categories WHERE name = 'outerwear'
+UNION ALL
+SELECT 'socks', id FROM categories WHERE name = 'underwear'
+UNION ALL
+SELECT 'underpants', id FROM categories WHERE name = 'underwear';
 
--- Level 2: sub-categories under Men's Clothing
-INSERT INTO CATEGORIES (name, parent_id)
-SELECT v.name, parent.id
-FROM (VALUES ('T-Shirts'),
-             ('Jeans'),
-             ('Jackets'),
-             ('Hoodies & Sweatshirts'),
-             ('Knitwear'),
-             ('Trousers')) AS v(name)
-         CROSS JOIN (SELECT id
-                     FROM CATEGORIES
-                     WHERE name = 'Men''s Clothing') AS parent;
+-- ============================================================================
+-- BRANDS (apparel relevant)
+-- ============================================================================
+INSERT INTO brands (name)
+VALUES ('Nike'), ('Adidas'), ('Puma'), ('Under Armour'), ('Levi''s'),
+       ('H&M'), ('Zara'), ('Hugo Boss'), ('Guess'), ('Uniqlo');
 
--- Level 2: sub-categories under Women's Clothing
--- Note: 'Jeans' and 'Knitwear' intentionally reuse names — allowed
---       because (parent_id, name) is the unique key, not name alone.
-INSERT INTO CATEGORIES (name, parent_id)
-SELECT v.name, parent.id
-FROM (VALUES ('Dresses'),
-             ('Tops & Blouses'),
-             ('Jeans'),
-             ('Knitwear')) AS v(name)
-         CROSS JOIN (SELECT id
-                     FROM CATEGORIES
-                     WHERE name = 'Women''s Clothing') AS parent;
+-- ============================================================================
+-- PRODUCTS (apparel only)
+-- ============================================================================
+INSERT INTO products (name, description)
+VALUES ('Jeans', 'Denim trousers used for general apparel wear'),
+       ('Trousers', 'Formal or casual lower-body garment'),
+       ('Chinos', 'Lightweight cotton trousers for casual or semi-formal use'),
+       ('Joggers', 'Comfortable elastic waist athletic pants'),
+       ('Shorts', 'Short length lower-body garment for warm weather'),
+       ('Skirt', 'Lower-body garment worn in apparel fashion'),
+       ('Tshirt', 'Short-sleeve upper-body cotton garment'),
+       ('Shirt', 'Buttoned upper-body garment for formal or casual use'),
+       ('Polo', 'Collared short-sleeve shirt for casual and sporty wear'),
+       ('Tanktop', 'Sleeveless upper-body garment for warm climates'),
+       ('Jacket', 'Light to heavy outerwear garment for protection and warmth'),
+       ('Coat', 'Long outerwear garment for cold weather protection'),
+       ('Hoodie', 'Soft pullover garment with hood'),
+       ('Socks', 'Footwear inner garment for comfort and hygiene'),
+       ('Underwear', 'Base layer garment worn under clothing');
 
+-- ============================================================================
+-- PRODUCT CATEGORIES MAPPING
+-- ============================================================================
+INSERT INTO product_categories (product_id, category_id)
+SELECT p.id, c.id
+FROM products p
+JOIN categories c ON c.name = CASE p.name
+    WHEN 'Jeans' THEN 'pants'
+    WHEN 'Trousers' THEN 'pants'
+    WHEN 'Chinos' THEN 'pants'
+    WHEN 'Joggers' THEN 'pants'
+    WHEN 'Shorts' THEN 'pants'
+    WHEN 'Skirt' THEN 'skirts'
+    WHEN 'Tshirt' THEN 'tshirts'
+    WHEN 'Shirt' THEN 'shirts'
+    WHEN 'Polo' THEN 'shirts'
+    WHEN 'Tanktop' THEN 'shirts'
+    WHEN 'Jacket' THEN 'jackets'
+    WHEN 'Coat' THEN 'jackets'
+    WHEN 'Hoodie' THEN 'hoodies'
+    WHEN 'Socks' THEN 'socks'
+    WHEN 'Underwear' THEN 'underpants'
+END;
 
--- ------------------------------------------------------------
--- 3. ATTRIBUTES
--- ------------------------------------------------------------
-INSERT INTO ATTRIBUTES (name, data_type, unit, is_variant_attribute)
-VALUES ('Color', 'text', NULL, TRUE),     -- differentiates variants
-       ('Size', 'text', NULL, TRUE),      -- differentiates variants
-       ('Material', 'text', NULL, FALSE), -- shared across all variants of a product
-       ('Fit', 'text', NULL, FALSE);
--- shared across all variants of a product
+-- ============================================================================
+-- ATTRIBUTES (apparel relevant)
+-- ============================================================================
+INSERT INTO attributes (name, data_type, unit, is_variant_attribute)
+VALUES ('size', 'VARCHAR', NULL, TRUE),
+       ('color', 'VARCHAR', NULL, TRUE),
+       ('fit', 'VARCHAR', NULL, TRUE),
+       ('gender', 'VARCHAR', NULL, TRUE),
+       ('fabric_type', 'VARCHAR', NULL, TRUE),
+       ('sleeve_length', 'VARCHAR', NULL, TRUE),
+       ('season', 'VARCHAR', NULL, TRUE),
+       ('material', 'VARCHAR', NULL, TRUE);
 
-
--- ------------------------------------------------------------
--- 4. ATTRIBUTE_VALUES
--- ------------------------------------------------------------
-
--- Color
-INSERT INTO ATTRIBUTE_VALUES (attribute_id, value)
-SELECT a.id, v.value
-FROM ATTRIBUTES a
-         CROSS JOIN (VALUES ('Black'),
-                            ('White'),
-                            ('Navy'),
-                            ('Grey'),
-                            ('Red'),
-                            ('Blue'),
-                            ('Green'),
-                            ('Beige'),
-                            ('Olive'),
-                            ('Burgundy')) AS v(value)
-WHERE a.name = 'Color';
-
--- Size  (standard garment + denim waist sizes)
-INSERT INTO ATTRIBUTE_VALUES (attribute_id, value)
-SELECT a.id, v.value
-FROM ATTRIBUTES a
-         CROSS JOIN (VALUES ('XS'),
-                            ('S'),
-                            ('M'),
-                            ('L'),
-                            ('XL'),
-                            ('XXL'),
-                            ('W28'),
-                            ('W30'),
-                            ('W32'),
-                            ('W34')) AS v(value)
-WHERE a.name = 'Size';
-
--- Material
-INSERT INTO ATTRIBUTE_VALUES (attribute_id, value)
-SELECT a.id, v.value
-FROM ATTRIBUTES a
-         CROSS JOIN (VALUES ('100% Cotton'),
-                            ('Cotton-Polyester Blend'),
-                            ('Denim'),
-                            ('Merino Wool Blend'),
-                            ('Linen-Cotton Blend'),
-                            ('Fleece')) AS v(value)
-WHERE a.name = 'Material';
-
--- Fit
-INSERT INTO ATTRIBUTE_VALUES (attribute_id, value)
-SELECT a.id, v.value
-FROM ATTRIBUTES a
-         CROSS JOIN (VALUES ('Regular Fit'),
-                            ('Slim Fit'),
-                            ('Relaxed Fit'),
-                            ('Oversized')) AS v(value)
-WHERE a.name = 'Fit';
-
-
--- ------------------------------------------------------------
--- 5. PRODUCTS  (10 clothing products)
--- ------------------------------------------------------------
-INSERT INTO PRODUCTS (name, description)
-VALUES ('Classic Crew Neck T-Shirt',
-        'Timeless everyday crew-neck tee crafted from premium ring-spun cotton.'),
-       ('511 Slim Fit Jeans',
-        'Iconic slim-fit jeans with a modern tapered leg and stretch denim.'),
-       ('Essentials Zip-Up Hoodie',
-        'Comfortable fleece-lined hoodie with a full-length zip and kangaroo pocket.'),
-       ('Floral Midi Dress',
-        'Lightweight floral-print midi dress with a flowy silhouette for warm seasons.'),
-       ('Classic Polo Shirt',
-        'Breathable piqué-knit polo with clean lines and a classic three-button placket.'),
-       ('Striped Wrap Blouse',
-        'Elegant striped blouse with a flattering wrap-style front and relaxed drape.'),
-       ('Urban Bomber Jacket',
-        'Casual urban bomber with a satin-feel shell, ribbed cuffs, and a full-zip front.'),
-       ('Ribbed Knit Sweater',
-        'Fine-knit merino wool-blend sweater featuring an all-over ribbed texture.'),
-       ('Utility Cargo Trousers',
-        'Relaxed-fit cargo trousers with multiple utility side pockets and a tapered hem.'),
-       ('Trucker Denim Jacket',
-        'Classic trucker-style jacket in rigid denim with signature chest pockets and button cuffs.');
-
-
--- ------------------------------------------------------------
--- 6. PRODUCT_CATEGORIES
---    Most products → one leaf category.
---    Classic Polo Shirt and Essentials Zip-Up Hoodie also appear
---    at the Men's Clothing level-1 category to demonstrate
---    multi-level categorisation.
--- ------------------------------------------------------------
-INSERT INTO PRODUCT_CATEGORIES (product_id, category_id)
-SELECT p.id, cat.id
+-- ============================================================================
+-- ATTRIBUTE VALUES (apparel relevant)
+-- ============================================================================
+INSERT INTO attribute_values (attribute_id, value)
+SELECT a.id, val
 FROM (VALUES
-          -- product_name                    cat_name                parent_name
-          ('Classic Crew Neck T-Shirt', 'T-Shirts', 'Men''s Clothing'),
-          ('511 Slim Fit Jeans', 'Jeans', 'Men''s Clothing'),
-          ('Essentials Zip-Up Hoodie', 'Hoodies & Sweatshirts', 'Men''s Clothing'),
-          ('Essentials Zip-Up Hoodie', 'Men''s Clothing', 'Clothing'), -- also at level-1
-          ('Floral Midi Dress', 'Dresses', 'Women''s Clothing'),
-          ('Classic Polo Shirt', 'T-Shirts', 'Men''s Clothing'),
-          ('Classic Polo Shirt', 'Men''s Clothing', 'Clothing'),       -- also at level-1
-          ('Striped Wrap Blouse', 'Tops & Blouses', 'Women''s Clothing'),
-          ('Urban Bomber Jacket', 'Jackets', 'Men''s Clothing'),
-          ('Ribbed Knit Sweater', 'Knitwear', 'Women''s Clothing'),
-          ('Utility Cargo Trousers', 'Trousers', 'Men''s Clothing'),
-          ('Trucker Denim Jacket', 'Jackets', 'Men''s Clothing')) AS pc(product_name, cat_name, parent_name)
-         JOIN PRODUCTS p ON p.name = pc.product_name
-         JOIN CATEGORIES cat
-              ON cat.name = pc.cat_name
-                  AND cat.parent_id = (SELECT id FROM CATEGORIES WHERE name = pc.parent_name);
+    ('size', 'XS'), ('size', 'S'), ('size', 'M'), ('size', 'L'), ('size', 'XL'), ('size', 'XXL'),
+    ('color', 'beige'), ('color', 'black'), ('color', 'blue'), ('color', 'camel'), ('color', 'green'),
+    ('color', 'grey'), ('color', 'khaki'), ('color', 'navy'), ('color', 'olive'), ('color', 'red'),
+    ('color', 'striped'), ('color', 'white'),
+    ('fit', 'flared'), ('fit', 'loose'), ('fit', 'oversized'), ('fit', 'regular'), ('fit', 'relaxed'),
+    ('fit', 'skinny'), ('fit', 'slim'), ('fit', 'tailored'), ('fit', 'tight'),
+    ('gender', 'male'), ('gender', 'female'), ('gender', 'unisex'),
+    ('fabric_type', 'cashmere'), ('fabric_type', 'cotton'), ('fabric_type', 'cotton_pique'),
+    ('fabric_type', 'cotton_twill'), ('fabric_type', 'denim'), ('fabric_type', 'fleece'),
+    ('fabric_type', 'leather'), ('fabric_type', 'linen'), ('fabric_type', 'nylon'),
+    ('fabric_type', 'polyester'), ('fabric_type', 'raw_denim'), ('fabric_type', 'stretch_cotton'),
+    ('fabric_type', 'stretch_denim'), ('fabric_type', 'wool'),
+    ('sleeve_length', 'long'), ('sleeve_length', 'short'), ('sleeve_length', 'sleeveless'),
+    ('season', 'spring'), ('season', 'summer'), ('season', 'autumn'), ('season', 'winter'),
+    ('material', 'cotton'), ('material', 'wool'), ('material', 'polyester'), ('material', 'microfiber'), ('material', 'modal')
+) AS t(attr_name, val)
+JOIN attributes a ON a.name = t.attr_name;
 
+-- ============================================================================
+-- HELPER SEQUENCE FOR SKU
+-- ============================================================================
+CREATE SEQUENCE IF NOT EXISTS variant_sku_seq START 1;
 
--- ------------------------------------------------------------
--- 7. PRODUCT_VARIANTS  (23 variants across 10 products)
---
---  SKU format:  {BRAND_ABBR}-{PRODUCT_ABBR}-{COLOR_ABBR}-{SIZE}
---  Statuses:    mostly 'active'; a few 'inactive' / 'discontinued'
--- ------------------------------------------------------------
-INSERT INTO PRODUCT_VARIANTS (product_id, sku, brand_id, barcode, price, weight, status)
-SELECT p.id, v.sku, b.id, v.barcode, v.price::NUMERIC, v.weight::NUMERIC, v.status
-FROM (VALUES
-          -- Classic Crew Neck T-Shirt  (Uniqlo)
-          ('Classic Crew Neck T-Shirt', 'UNQ-CCNT-BLK-M', 'Uniqlo', '4000000000001', 19.99, 0.20, 'active'),
-          ('Classic Crew Neck T-Shirt', 'UNQ-CCNT-WHT-L', 'Uniqlo', '4000000000002', 19.99, 0.20, 'active'),
-          ('Classic Crew Neck T-Shirt', 'UNQ-CCNT-NVY-S', 'Uniqlo', '4000000000003', 19.99, 0.20, 'active'),
+-- ============================================================================
+-- FUNCTION TO GET ATTRIBUTE VALUE ID
+-- ============================================================================
+CREATE OR REPLACE FUNCTION get_av_id(attr_name TEXT, attr_value TEXT)
+RETURNS INTEGER LANGUAGE sql STABLE AS $$
+    SELECT id FROM attribute_values
+    WHERE attribute_id = (SELECT id FROM attributes WHERE name = attr_name)
+      AND value = attr_value;
+$$;
 
-          -- 511 Slim Fit Jeans  (Levi's)
-          ('511 Slim Fit Jeans', 'LEV-511-BLK-W30', 'Levi''s', '4000000000004', 79.99, 0.82, 'active'),
-          ('511 Slim Fit Jeans', 'LEV-511-BLU-W32', 'Levi''s', '4000000000005', 79.99, 0.85, 'active'),
-          ('511 Slim Fit Jeans', 'LEV-511-GRY-W34', 'Levi''s', '4000000000006', 79.99, 0.88, 'discontinued'),
+-- ============================================================================
+-- TEMPORARY HASH COLUMN FOR PRODUCT_VARIANTS (will be dropped later)
+-- ============================================================================
+ALTER TABLE product_variants ADD COLUMN temp_hash TEXT;
 
-          -- Essentials Zip-Up Hoodie  (Nike)
-          ('Essentials Zip-Up Hoodie', 'NIK-EZUH-BLK-M', 'Nike', '4000000000007', 59.99, 0.50, 'active'),
-          ('Essentials Zip-Up Hoodie', 'NIK-EZUH-GRY-L', 'Nike', '4000000000008', 59.99, 0.55, 'active'),
+-- ============================================================================
+-- 1. PANTS & SKIRTS
+-- ============================================================================
+CREATE TEMP TABLE temp_pants_skirts AS
+SELECT
+    p.id AS product_id,
+    b.id AS brand_id,
+    get_av_id('size', sz.val) AS size_av_id,
+    get_av_id('color', col.val) AS color_av_id,
+    get_av_id('fit', fit.val) AS fit_av_id,
+    get_av_id('gender', gen.val) AS gender_av_id,
+    get_av_id('fabric_type', fab.val) AS fabric_av_id,
+    sz.val AS size_val,
+    col.val AS color_val,
+    fit.val AS fit_val,
+    gen.val AS gender_val,
+    fab.val AS fabric_val,
+    md5(p.id::text || b.id::text || sz.val || col.val || fit.val || gen.val || fab.val) AS unique_hash
+FROM products p
+JOIN product_categories pc ON pc.product_id = p.id
+JOIN categories c ON c.id = pc.category_id AND c.name IN ('pants', 'skirts')
+CROSS JOIN (VALUES ('XS'),('S'),('M'),('L'),('XL'),('XXL')) AS sz(val)
+CROSS JOIN (VALUES ('beige'),('black'),('blue'),('camel'),('green'),('grey'),('khaki'),('navy'),('olive'),('red'),('striped'),('white')) AS col(val)
+CROSS JOIN (VALUES ('flared'),('loose'),('oversized'),('regular'),('relaxed'),('skinny'),('slim'),('tailored'),('tight')) AS fit(val)
+CROSS JOIN (VALUES ('male'),('female'),('unisex')) AS gen(val)
+CROSS JOIN (VALUES ('cotton'),('denim'),('polyester'),('stretch_denim'),('wool')) AS fab(val)
+CROSS JOIN LATERAL (SELECT id FROM brands WHERE name IN ('Nike','Adidas','Levi''s','Uniqlo','Zara')) b
+WHERE p.name IN ('Jeans','Trousers','Chinos','Joggers','Shorts','Skirt');
 
-          -- Floral Midi Dress  (Zara)
-          ('Floral Midi Dress', 'ZAR-FMD-BEI-S', 'Zara', '4000000000009', 49.99, 0.30, 'active'),
-          ('Floral Midi Dress', 'ZAR-FMD-BLU-M', 'Zara', '4000000000010', 49.99, 0.32, 'active'),
+-- Insert variants with hash
+INSERT INTO product_variants (product_id, sku, brand_id, barcode, price, weight, status, temp_hash)
+SELECT
+    t.product_id,
+    'SKU-' || nextval('variant_sku_seq'),
+    t.brand_id,
+    'BAR-' || currval('variant_sku_seq'),
+    ROUND(
+        CASE p.name
+            WHEN 'Jeans' THEN 49.99
+            WHEN 'Trousers' THEN 59.99
+            WHEN 'Chinos' THEN 44.99
+            WHEN 'Joggers' THEN 39.99
+            WHEN 'Shorts' THEN 29.99
+            WHEN 'Skirt' THEN 34.99
+        END *
+        CASE b.name
+            WHEN 'Nike' THEN 1.2 WHEN 'Adidas' THEN 1.2 WHEN 'Levi''s' THEN 1.3
+            WHEN 'Uniqlo' THEN 0.9 WHEN 'Zara' THEN 1.0 ELSE 1.0
+        END *
+        CASE t.size_val
+            WHEN 'XS' THEN 0.9 WHEN 'S' THEN 0.95 WHEN 'M' THEN 1.0
+            WHEN 'L' THEN 1.05 WHEN 'XL' THEN 1.1 WHEN 'XXL' THEN 1.15
+        END
+    , 2) AS price,
+    CASE p.name
+        WHEN 'Jeans' THEN 0.7 WHEN 'Trousers' THEN 0.6 WHEN 'Chinos' THEN 0.5
+        WHEN 'Joggers' THEN 0.4 WHEN 'Shorts' THEN 0.3 WHEN 'Skirt' THEN 0.3
+    END AS weight,
+    'active',
+    t.unique_hash
+FROM temp_pants_skirts t
+JOIN products p ON p.id = t.product_id
+JOIN brands b ON b.id = t.brand_id;
 
-          -- Classic Polo Shirt  (Adidas)
-          ('Classic Polo Shirt', 'ADI-CPOL-WHT-M', 'Adidas', '4000000000011', 39.99, 0.25, 'active'),
-          ('Classic Polo Shirt', 'ADI-CPOL-NVY-L', 'Adidas', '4000000000012', 39.99, 0.25, 'active'),
-          ('Classic Polo Shirt', 'ADI-CPOL-RED-S', 'Adidas', '4000000000013', 39.99, 0.24, 'inactive'),
+-- Add product_variant_id column to temp table
+ALTER TABLE temp_pants_skirts ADD COLUMN product_variant_id BIGINT;
 
-          -- Striped Wrap Blouse  (H&M)
-          ('Striped Wrap Blouse', 'HM-SWB-WHT-S', 'H&M', '4000000000014', 24.99, 0.20, 'active'),
-          ('Striped Wrap Blouse', 'HM-SWB-BLU-M', 'H&M', '4000000000015', 24.99, 0.22, 'active'),
+-- Match using hash (and also product_id, brand_id as safety)
+UPDATE temp_pants_skirts t
+SET product_variant_id = v.id
+FROM product_variants v
+WHERE t.unique_hash = v.temp_hash
+  AND t.product_id = v.product_id
+  AND t.brand_id = v.brand_id;
 
-          -- Urban Bomber Jacket  (Zara)
-          ('Urban Bomber Jacket', 'ZAR-UBJ-BLK-M', 'Zara', '4000000000016', 89.99, 0.90, 'active'),
-          ('Urban Bomber Jacket', 'ZAR-UBJ-OLV-L', 'Zara', '4000000000017', 89.99, 0.95, 'active'),
+-- Insert variant attributes (only where product_variant_id is not null)
+INSERT INTO variant_attributes (product_variant_id, attribute_value_id, attribute_id)
+SELECT product_variant_id, size_av_id, (SELECT id FROM attributes WHERE name = 'size')
+FROM temp_pants_skirts WHERE product_variant_id IS NOT NULL
+ON CONFLICT DO NOTHING;
 
-          -- Ribbed Knit Sweater  (Uniqlo)
-          ('Ribbed Knit Sweater', 'UNQ-RKS-BEI-S', 'Uniqlo', '4000000000018', 44.99, 0.45, 'active'),
-          ('Ribbed Knit Sweater', 'UNQ-RKS-BRG-M', 'Uniqlo', '4000000000019', 44.99, 0.47, 'active'),
+INSERT INTO variant_attributes (product_variant_id, attribute_value_id, attribute_id)
+SELECT product_variant_id, color_av_id, (SELECT id FROM attributes WHERE name = 'color')
+FROM temp_pants_skirts WHERE product_variant_id IS NOT NULL
+ON CONFLICT DO NOTHING;
 
-          -- Utility Cargo Trousers  (H&M)
-          ('Utility Cargo Trousers', 'HM-UCT-BEI-M', 'H&M', '4000000000020', 34.99, 0.60, 'active'),
-          ('Utility Cargo Trousers', 'HM-UCT-BLK-L', 'H&M', '4000000000021', 34.99, 0.62, 'active'),
+INSERT INTO variant_attributes (product_variant_id, attribute_value_id, attribute_id)
+SELECT product_variant_id, fit_av_id, (SELECT id FROM attributes WHERE name = 'fit')
+FROM temp_pants_skirts WHERE product_variant_id IS NOT NULL
+ON CONFLICT DO NOTHING;
 
-          -- Trucker Denim Jacket  (Levi's)
-          ('Trucker Denim Jacket', 'LEV-TDJ-BLU-M', 'Levi''s', '4000000000022', 99.99, 1.00, 'active'),
-          ('Trucker Denim Jacket', 'LEV-TDJ-BLK-L', 'Levi''s', '4000000000023', 99.99, 1.05,
-           'active')) AS v(product_name, sku, brand_name, barcode, price, weight, status)
-         JOIN PRODUCTS p ON p.name = v.product_name
-         JOIN BRANDS b ON b.name = v.brand_name;
+INSERT INTO variant_attributes (product_variant_id, attribute_value_id, attribute_id)
+SELECT product_variant_id, gender_av_id, (SELECT id FROM attributes WHERE name = 'gender')
+FROM temp_pants_skirts WHERE product_variant_id IS NOT NULL
+ON CONFLICT DO NOTHING;
 
+INSERT INTO variant_attributes (product_variant_id, attribute_value_id, attribute_id)
+SELECT product_variant_id, fabric_av_id, (SELECT id FROM attributes WHERE name = 'fabric_type')
+FROM temp_pants_skirts WHERE product_variant_id IS NOT NULL
+ON CONFLICT DO NOTHING;
 
--- ------------------------------------------------------------
--- 8. PRODUCT_IMAGES  (2 positions per variant = 46 images)
---    URL pattern: https://cdn.example.com/images/{sku}/img-{n}.jpg
--- ------------------------------------------------------------
-INSERT INTO PRODUCT_IMAGES (product_variants_id, url, position)
-SELECT pv.id,
-       'https://cdn.example.com/images/' || pv.sku || '/img-' || pos.n || '.jpg',
-       pos.n
-FROM PRODUCT_VARIANTS pv
-         CROSS JOIN (VALUES (1), (2)) AS pos(n)
-WHERE pv.product_id IN (SELECT id
-                        FROM PRODUCTS
-                        WHERE name IN (
-                                       'Classic Crew Neck T-Shirt', '511 Slim Fit Jeans', 'Essentials Zip-Up Hoodie',
-                                       'Floral Midi Dress', 'Classic Polo Shirt', 'Striped Wrap Blouse',
-                                       'Urban Bomber Jacket', 'Ribbed Knit Sweater', 'Utility Cargo Trousers',
-                                       'Trucker Denim Jacket'
-                            ));
+DROP TABLE temp_pants_skirts;
 
+-- ============================================================================
+-- 2. TOPS (add sleeve_length)
+-- ============================================================================
+CREATE TEMP TABLE temp_tops AS
+SELECT
+    p.id AS product_id,
+    b.id AS brand_id,
+    get_av_id('size', sz.val) AS size_av_id,
+    get_av_id('color', col.val) AS color_av_id,
+    get_av_id('fit', fit.val) AS fit_av_id,
+    get_av_id('gender', gen.val) AS gender_av_id,
+    get_av_id('fabric_type', fab.val) AS fabric_av_id,
+    get_av_id('sleeve_length', sl.val) AS sleeve_av_id,
+    sz.val AS size_val,
+    col.val AS color_val,
+    fit.val AS fit_val,
+    gen.val AS gender_val,
+    fab.val AS fabric_val,
+    sl.val AS sleeve_val,
+    md5(p.id::text || b.id::text || sz.val || col.val || fit.val || gen.val || fab.val || sl.val) AS unique_hash
+FROM products p
+JOIN product_categories pc ON pc.product_id = p.id
+JOIN categories c ON c.id = pc.category_id AND c.name IN ('tshirts', 'shirts')
+CROSS JOIN (VALUES ('XS'),('S'),('M'),('L'),('XL'),('XXL')) AS sz(val)
+CROSS JOIN (VALUES ('white'),('black'),('blue'),('red'),('grey'),('navy')) AS col(val)
+CROSS JOIN (VALUES ('regular'),('slim'),('loose'),('oversized')) AS fit(val)
+CROSS JOIN (VALUES ('male'),('female'),('unisex')) AS gen(val)
+CROSS JOIN (VALUES ('cotton'),('polyester'),('cotton_pique'),('linen')) AS fab(val)
+CROSS JOIN (VALUES ('short'),('long'),('sleeveless')) AS sl(val)
+CROSS JOIN LATERAL (SELECT id FROM brands WHERE name IN ('Nike','Adidas','Uniqlo','H&M','Zara')) b
+WHERE p.name IN ('Tshirt','Shirt','Polo','Tanktop');
 
--- ------------------------------------------------------------
--- 9. VARIANT_ATTRIBUTES  (4 attributes × 23 variants = 92 rows)
---
---  Each variant carries:
---    Color    (is_variant_attribute = TRUE)  — differentiates variants
---    Size     (is_variant_attribute = TRUE)  — differentiates variants
---    Material (is_variant_attribute = FALSE) — same for all variants of a product
---    Fit      (is_variant_attribute = FALSE) — same for all variants of a product
---
---  The JOIN on ATTRIBUTE_VALUES satisfies the composite FK
---  FK_VARIANT_ATTRIBUTES_ATTRIBUTE_VALUE (attribute_id, id).
--- ------------------------------------------------------------
-INSERT INTO VARIANT_ATTRIBUTES (product_variant_id, attribute_value_id, attribute_id)
-SELECT pv.id, av.id, av.attribute_id
-FROM (VALUES
-          -- sku                  attribute    value
-          -- Classic Crew Neck T-Shirt
-          ('UNQ-CCNT-BLK-M', 'Color', 'Black'),
-          ('UNQ-CCNT-BLK-M', 'Size', 'M'),
-          ('UNQ-CCNT-BLK-M', 'Material', '100% Cotton'),
-          ('UNQ-CCNT-BLK-M', 'Fit', 'Regular Fit'),
-          ('UNQ-CCNT-WHT-L', 'Color', 'White'),
-          ('UNQ-CCNT-WHT-L', 'Size', 'L'),
-          ('UNQ-CCNT-WHT-L', 'Material', '100% Cotton'),
-          ('UNQ-CCNT-WHT-L', 'Fit', 'Regular Fit'),
-          ('UNQ-CCNT-NVY-S', 'Color', 'Navy'),
-          ('UNQ-CCNT-NVY-S', 'Size', 'S'),
-          ('UNQ-CCNT-NVY-S', 'Material', '100% Cotton'),
-          ('UNQ-CCNT-NVY-S', 'Fit', 'Regular Fit'),
+INSERT INTO product_variants (product_id, sku, brand_id, barcode, price, weight, status, temp_hash)
+SELECT
+    t.product_id,
+    'SKU-' || nextval('variant_sku_seq'),
+    t.brand_id,
+    'BAR-' || currval('variant_sku_seq'),
+    ROUND(
+        CASE p.name
+            WHEN 'Tshirt' THEN 19.99 WHEN 'Shirt' THEN 34.99
+            WHEN 'Polo' THEN 29.99 WHEN 'Tanktop' THEN 14.99
+        END *
+        CASE b.name WHEN 'Nike' THEN 1.3 WHEN 'Adidas' THEN 1.3 ELSE 1.0 END *
+        CASE t.size_val WHEN 'XS' THEN 0.9 WHEN 'XXL' THEN 1.15 ELSE 1.0 END
+    , 2) AS price,
+    CASE p.name WHEN 'Tshirt' THEN 0.2 WHEN 'Shirt' THEN 0.25 WHEN 'Polo' THEN 0.22 ELSE 0.15 END AS weight,
+    'active',
+    t.unique_hash
+FROM temp_tops t
+JOIN products p ON p.id = t.product_id
+JOIN brands b ON b.id = t.brand_id;
 
-          -- 511 Slim Fit Jeans
-          ('LEV-511-BLK-W30', 'Color', 'Black'),
-          ('LEV-511-BLK-W30', 'Size', 'W30'),
-          ('LEV-511-BLK-W30', 'Material', 'Denim'),
-          ('LEV-511-BLK-W30', 'Fit', 'Slim Fit'),
-          ('LEV-511-BLU-W32', 'Color', 'Blue'),
-          ('LEV-511-BLU-W32', 'Size', 'W32'),
-          ('LEV-511-BLU-W32', 'Material', 'Denim'),
-          ('LEV-511-BLU-W32', 'Fit', 'Slim Fit'),
-          ('LEV-511-GRY-W34', 'Color', 'Grey'),
-          ('LEV-511-GRY-W34', 'Size', 'W34'),
-          ('LEV-511-GRY-W34', 'Material', 'Denim'),
-          ('LEV-511-GRY-W34', 'Fit', 'Slim Fit'),
+ALTER TABLE temp_tops ADD COLUMN product_variant_id BIGINT;
 
-          -- Essentials Zip-Up Hoodie
-          ('NIK-EZUH-BLK-M', 'Color', 'Black'),
-          ('NIK-EZUH-BLK-M', 'Size', 'M'),
-          ('NIK-EZUH-BLK-M', 'Material', 'Fleece'),
-          ('NIK-EZUH-BLK-M', 'Fit', 'Regular Fit'),
-          ('NIK-EZUH-GRY-L', 'Color', 'Grey'),
-          ('NIK-EZUH-GRY-L', 'Size', 'L'),
-          ('NIK-EZUH-GRY-L', 'Material', 'Fleece'),
-          ('NIK-EZUH-GRY-L', 'Fit', 'Regular Fit'),
+UPDATE temp_tops t
+SET product_variant_id = v.id
+FROM product_variants v
+WHERE t.unique_hash = v.temp_hash
+  AND t.product_id = v.product_id
+  AND t.brand_id = v.brand_id;
 
-          -- Floral Midi Dress
-          ('ZAR-FMD-BEI-S', 'Color', 'Beige'),
-          ('ZAR-FMD-BEI-S', 'Size', 'S'),
-          ('ZAR-FMD-BEI-S', 'Material', 'Linen-Cotton Blend'),
-          ('ZAR-FMD-BEI-S', 'Fit', 'Regular Fit'),
-          ('ZAR-FMD-BLU-M', 'Color', 'Blue'),
-          ('ZAR-FMD-BLU-M', 'Size', 'M'),
-          ('ZAR-FMD-BLU-M', 'Material', 'Linen-Cotton Blend'),
-          ('ZAR-FMD-BLU-M', 'Fit', 'Regular Fit'),
+INSERT INTO variant_attributes SELECT product_variant_id, size_av_id, (SELECT id FROM attributes WHERE name = 'size') FROM temp_tops WHERE product_variant_id IS NOT NULL ON CONFLICT DO NOTHING;
+INSERT INTO variant_attributes SELECT product_variant_id, color_av_id, (SELECT id FROM attributes WHERE name = 'color') FROM temp_tops WHERE product_variant_id IS NOT NULL ON CONFLICT DO NOTHING;
+INSERT INTO variant_attributes SELECT product_variant_id, fit_av_id, (SELECT id FROM attributes WHERE name = 'fit') FROM temp_tops WHERE product_variant_id IS NOT NULL ON CONFLICT DO NOTHING;
+INSERT INTO variant_attributes SELECT product_variant_id, gender_av_id, (SELECT id FROM attributes WHERE name = 'gender') FROM temp_tops WHERE product_variant_id IS NOT NULL ON CONFLICT DO NOTHING;
+INSERT INTO variant_attributes SELECT product_variant_id, fabric_av_id, (SELECT id FROM attributes WHERE name = 'fabric_type') FROM temp_tops WHERE product_variant_id IS NOT NULL ON CONFLICT DO NOTHING;
+INSERT INTO variant_attributes SELECT product_variant_id, sleeve_av_id, (SELECT id FROM attributes WHERE name = 'sleeve_length') FROM temp_tops WHERE product_variant_id IS NOT NULL ON CONFLICT DO NOTHING;
 
-          -- Classic Polo Shirt
-          ('ADI-CPOL-WHT-M', 'Color', 'White'),
-          ('ADI-CPOL-WHT-M', 'Size', 'M'),
-          ('ADI-CPOL-WHT-M', 'Material', '100% Cotton'),
-          ('ADI-CPOL-WHT-M', 'Fit', 'Regular Fit'),
-          ('ADI-CPOL-NVY-L', 'Color', 'Navy'),
-          ('ADI-CPOL-NVY-L', 'Size', 'L'),
-          ('ADI-CPOL-NVY-L', 'Material', '100% Cotton'),
-          ('ADI-CPOL-NVY-L', 'Fit', 'Regular Fit'),
-          ('ADI-CPOL-RED-S', 'Color', 'Red'),
-          ('ADI-CPOL-RED-S', 'Size', 'S'),
-          ('ADI-CPOL-RED-S', 'Material', '100% Cotton'),
-          ('ADI-CPOL-RED-S', 'Fit', 'Regular Fit'),
+DROP TABLE temp_tops;
 
-          -- Striped Wrap Blouse
-          ('HM-SWB-WHT-S', 'Color', 'White'),
-          ('HM-SWB-WHT-S', 'Size', 'S'),
-          ('HM-SWB-WHT-S', 'Material', 'Linen-Cotton Blend'),
-          ('HM-SWB-WHT-S', 'Fit', 'Relaxed Fit'),
-          ('HM-SWB-BLU-M', 'Color', 'Blue'),
-          ('HM-SWB-BLU-M', 'Size', 'M'),
-          ('HM-SWB-BLU-M', 'Material', 'Linen-Cotton Blend'),
-          ('HM-SWB-BLU-M', 'Fit', 'Relaxed Fit'),
+-- ============================================================================
+-- 3. OUTERWEAR (add season)
+-- ============================================================================
+CREATE TEMP TABLE temp_outerwear AS
+SELECT
+    p.id AS product_id,
+    b.id AS brand_id,
+    get_av_id('size', sz.val) AS size_av_id,
+    get_av_id('color', col.val) AS color_av_id,
+    get_av_id('fit', fit.val) AS fit_av_id,
+    get_av_id('fabric_type', fab.val) AS fabric_av_id,
+    get_av_id('season', se.val) AS season_av_id,
+    sz.val AS size_val,
+    col.val AS color_val,
+    fit.val AS fit_val,
+    fab.val AS fabric_val,
+    se.val AS season_val,
+    md5(p.id::text || b.id::text || sz.val || col.val || fit.val || fab.val || se.val) AS unique_hash
+FROM products p
+JOIN product_categories pc ON pc.product_id = p.id
+JOIN categories c ON c.id = pc.category_id AND c.name IN ('jackets', 'hoodies')
+CROSS JOIN (VALUES ('S'),('M'),('L'),('XL'),('XXL')) AS sz(val)
+CROSS JOIN (VALUES ('black'),('navy'),('grey'),('olive'),('brown')) AS col(val)
+CROSS JOIN (VALUES ('regular'),('loose'),('oversized')) AS fit(val)
+CROSS JOIN (VALUES ('cotton'),('polyester'),('wool'),('nylon')) AS fab(val)
+CROSS JOIN (VALUES ('winter'),('autumn'),('spring')) AS se(val)
+CROSS JOIN LATERAL (SELECT id FROM brands WHERE name IN ('Nike','Adidas','The North Face','Patagonia','Columbia')) b
+WHERE p.name IN ('Jacket','Coat','Hoodie');
 
-          -- Urban Bomber Jacket
-          ('ZAR-UBJ-BLK-M', 'Color', 'Black'),
-          ('ZAR-UBJ-BLK-M', 'Size', 'M'),
-          ('ZAR-UBJ-BLK-M', 'Material', 'Cotton-Polyester Blend'),
-          ('ZAR-UBJ-BLK-M', 'Fit', 'Regular Fit'),
-          ('ZAR-UBJ-OLV-L', 'Color', 'Olive'),
-          ('ZAR-UBJ-OLV-L', 'Size', 'L'),
-          ('ZAR-UBJ-OLV-L', 'Material', 'Cotton-Polyester Blend'),
-          ('ZAR-UBJ-OLV-L', 'Fit', 'Regular Fit'),
+INSERT INTO product_variants (product_id, sku, brand_id, barcode, price, weight, status, temp_hash)
+SELECT
+    t.product_id,
+    'SKU-' || nextval('variant_sku_seq'),
+    t.brand_id,
+    'BAR-' || currval('variant_sku_seq'),
+    ROUND(
+        CASE p.name WHEN 'Jacket' THEN 79.99 WHEN 'Coat' THEN 129.99 WHEN 'Hoodie' THEN 49.99 END *
+        CASE b.name WHEN 'Nike' THEN 1.2 WHEN 'Adidas' THEN 1.2 ELSE 1.0 END *
+        CASE t.size_val WHEN 'XXL' THEN 1.1 ELSE 1.0 END
+    , 2) AS price,
+    CASE p.name WHEN 'Jacket' THEN 0.9 WHEN 'Coat' THEN 1.2 WHEN 'Hoodie' THEN 0.5 END AS weight,
+    'active',
+    t.unique_hash
+FROM temp_outerwear t
+JOIN products p ON p.id = t.product_id
+JOIN brands b ON b.id = t.brand_id;
 
-          -- Ribbed Knit Sweater
-          ('UNQ-RKS-BEI-S', 'Color', 'Beige'),
-          ('UNQ-RKS-BEI-S', 'Size', 'S'),
-          ('UNQ-RKS-BEI-S', 'Material', 'Merino Wool Blend'),
-          ('UNQ-RKS-BEI-S', 'Fit', 'Regular Fit'),
-          ('UNQ-RKS-BRG-M', 'Color', 'Burgundy'),
-          ('UNQ-RKS-BRG-M', 'Size', 'M'),
-          ('UNQ-RKS-BRG-M', 'Material', 'Merino Wool Blend'),
-          ('UNQ-RKS-BRG-M', 'Fit', 'Regular Fit'),
+ALTER TABLE temp_outerwear ADD COLUMN product_variant_id BIGINT;
 
-          -- Utility Cargo Trousers
-          ('HM-UCT-BEI-M', 'Color', 'Beige'),
-          ('HM-UCT-BEI-M', 'Size', 'M'),
-          ('HM-UCT-BEI-M', 'Material', 'Cotton-Polyester Blend'),
-          ('HM-UCT-BEI-M', 'Fit', 'Relaxed Fit'),
-          ('HM-UCT-BLK-L', 'Color', 'Black'),
-          ('HM-UCT-BLK-L', 'Size', 'L'),
-          ('HM-UCT-BLK-L', 'Material', 'Cotton-Polyester Blend'),
-          ('HM-UCT-BLK-L', 'Fit', 'Relaxed Fit'),
+UPDATE temp_outerwear t
+SET product_variant_id = v.id
+FROM product_variants v
+WHERE t.unique_hash = v.temp_hash
+  AND t.product_id = v.product_id
+  AND t.brand_id = v.brand_id;
 
-          -- Trucker Denim Jacket
-          ('LEV-TDJ-BLU-M', 'Color', 'Blue'),
-          ('LEV-TDJ-BLU-M', 'Size', 'M'),
-          ('LEV-TDJ-BLU-M', 'Material', 'Denim'),
-          ('LEV-TDJ-BLU-M', 'Fit', 'Regular Fit'),
-          ('LEV-TDJ-BLK-L', 'Color', 'Black'),
-          ('LEV-TDJ-BLK-L', 'Size', 'L'),
-          ('LEV-TDJ-BLK-L', 'Material', 'Denim'),
-          ('LEV-TDJ-BLK-L', 'Fit', 'Regular Fit')) AS va(sku, attr_name, attr_value)
-         JOIN PRODUCT_VARIANTS pv ON pv.sku = va.sku
-         JOIN ATTRIBUTES a ON a.name = va.attr_name
-         JOIN ATTRIBUTE_VALUES av ON av.attribute_id = a.id
-    AND av.value = va.attr_value;
+INSERT INTO variant_attributes SELECT product_variant_id, size_av_id, (SELECT id FROM attributes WHERE name = 'size') FROM temp_outerwear WHERE product_variant_id IS NOT NULL ON CONFLICT DO NOTHING;
+INSERT INTO variant_attributes SELECT product_variant_id, color_av_id, (SELECT id FROM attributes WHERE name = 'color') FROM temp_outerwear WHERE product_variant_id IS NOT NULL ON CONFLICT DO NOTHING;
+INSERT INTO variant_attributes SELECT product_variant_id, fit_av_id, (SELECT id FROM attributes WHERE name = 'fit') FROM temp_outerwear WHERE product_variant_id IS NOT NULL ON CONFLICT DO NOTHING;
+INSERT INTO variant_attributes SELECT product_variant_id, fabric_av_id, (SELECT id FROM attributes WHERE name = 'fabric_type') FROM temp_outerwear WHERE product_variant_id IS NOT NULL ON CONFLICT DO NOTHING;
+INSERT INTO variant_attributes SELECT product_variant_id, season_av_id, (SELECT id FROM attributes WHERE name = 'season') FROM temp_outerwear WHERE product_variant_id IS NOT NULL ON CONFLICT DO NOTHING;
 
-COMMIT;
+DROP TABLE temp_outerwear;
 
--- ============================================================
---  QUICK SANITY CHECKS  (uncomment and run after inserting)
--- ============================================================
--- SELECT COUNT(*) FROM BRANDS;              -- expected:  6
--- SELECT COUNT(*) FROM CATEGORIES;          -- expected: 14  (1+3+6+4)
--- SELECT COUNT(*) FROM ATTRIBUTES;          -- expected:  4
--- SELECT COUNT(*) FROM ATTRIBUTE_VALUES;    -- expected: 30  (10+10+6+4)
--- SELECT COUNT(*) FROM PRODUCTS;            -- expected: 10
--- SELECT COUNT(*) FROM PRODUCT_CATEGORIES;  -- expected: 12
--- SELECT COUNT(*) FROM PRODUCT_VARIANTS;    -- expected: 23
--- SELECT COUNT(*) FROM PRODUCT_IMAGES;      -- expected: 46
--- SELECT COUNT(*) FROM VARIANT_ATTRIBUTES;  -- expected: 92
+-- ============================================================================
+-- 4. UNDERWEAR (Socks, Underwear)
+-- ============================================================================
+CREATE TEMP TABLE temp_underwear AS
+SELECT
+    p.id AS product_id,
+    b.id AS brand_id,
+    get_av_id('size', sz.val) AS size_av_id,
+    get_av_id('color', col.val) AS color_av_id,
+    get_av_id('material', mat.val) AS material_av_id,
+    get_av_id('fit', fit.val) AS fit_av_id,
+    sz.val AS size_val,
+    col.val AS color_val,
+    mat.val AS material_val,
+    fit.val AS fit_val,
+    md5(p.id::text || b.id::text || sz.val || col.val || mat.val || fit.val) AS unique_hash
+FROM products p
+JOIN product_categories pc ON pc.product_id = p.id
+JOIN categories c ON c.id = pc.category_id AND c.name IN ('socks', 'underpants')
+CROSS JOIN (VALUES ('S'),('M'),('L'),('XL')) AS sz(val)
+CROSS JOIN (VALUES ('white'),('black'),('grey'),('blue')) AS col(val)
+CROSS JOIN (VALUES ('cotton'),('polyester'),('wool'),('microfiber')) AS mat(val)
+CROSS JOIN (VALUES ('regular'),('tight')) AS fit(val)
+CROSS JOIN LATERAL (SELECT id FROM brands WHERE name IN ('Nike','Adidas','Hanes','Calvin Klein','Uniqlo')) b
+WHERE p.name IN ('Socks','Underwear');
 
--- Full product overview (variants + their resolved attribute values):
--- SELECT
---     p.name                                    AS product,
---     pv.sku,
---     b.name                                    AS brand,
---     MAX(CASE WHEN a.name = 'Color'    THEN av.value END) AS color,
---     MAX(CASE WHEN a.name = 'Size'     THEN av.value END) AS size,
---     MAX(CASE WHEN a.name = 'Material' THEN av.value END) AS material,
---     MAX(CASE WHEN a.name = 'Fit'      THEN av.value END) AS fit,
---     pv.price,
---     pv.status
--- FROM PRODUCTS p
--- JOIN PRODUCT_VARIANTS  pv ON pv.product_id       = p.id
--- JOIN BRANDS             b ON b.id                = pv.brand_id
--- JOIN VARIANT_ATTRIBUTES va ON va.product_variant_id = pv.id
--- JOIN ATTRIBUTE_VALUES  av ON av.id               = va.attribute_value_id
--- JOIN ATTRIBUTES         a ON a.id                = va.attribute_id
--- GROUP BY p.name, pv.sku, b.name, pv.price, pv.status
--- ORDER BY p.name, pv.sku;
+INSERT INTO product_variants (product_id, sku, brand_id, barcode, price, weight, status, temp_hash)
+SELECT
+    t.product_id,
+    'SKU-' || nextval('variant_sku_seq'),
+    t.brand_id,
+    'BAR-' || currval('variant_sku_seq'),
+    ROUND(
+        CASE p.name WHEN 'Socks' THEN 9.99 WHEN 'Underwear' THEN 14.99 END *
+        CASE b.name WHEN 'Calvin Klein' THEN 1.5 WHEN 'Nike' THEN 1.2 ELSE 1.0 END *
+        CASE t.size_val WHEN 'XL' THEN 1.1 ELSE 1.0 END
+    , 2) AS price,
+    CASE p.name WHEN 'Socks' THEN 0.05 WHEN 'Underwear' THEN 0.1 END AS weight,
+    'active',
+    t.unique_hash
+FROM temp_underwear t
+JOIN products p ON p.id = t.product_id
+JOIN brands b ON b.id = t.brand_id;
+
+ALTER TABLE temp_underwear ADD COLUMN product_variant_id BIGINT;
+
+UPDATE temp_underwear t
+SET product_variant_id = v.id
+FROM product_variants v
+WHERE t.unique_hash = v.temp_hash
+  AND t.product_id = v.product_id
+  AND t.brand_id = v.brand_id;
+
+INSERT INTO variant_attributes SELECT product_variant_id, size_av_id, (SELECT id FROM attributes WHERE name = 'size') FROM temp_underwear WHERE product_variant_id IS NOT NULL ON CONFLICT DO NOTHING;
+INSERT INTO variant_attributes SELECT product_variant_id, color_av_id, (SELECT id FROM attributes WHERE name = 'color') FROM temp_underwear WHERE product_variant_id IS NOT NULL ON CONFLICT DO NOTHING;
+INSERT INTO variant_attributes SELECT product_variant_id, material_av_id, (SELECT id FROM attributes WHERE name = 'material') FROM temp_underwear WHERE product_variant_id IS NOT NULL ON CONFLICT DO NOTHING;
+-- Insert fit only for 'Underwear' product
+INSERT INTO variant_attributes (product_variant_id, attribute_value_id, attribute_id)
+SELECT t.product_variant_id, t.fit_av_id, (SELECT id FROM attributes WHERE name = 'fit')
+FROM temp_underwear t
+JOIN products p ON p.id = t.product_id
+WHERE p.name = 'Underwear' AND t.product_variant_id IS NOT NULL
+ON CONFLICT DO NOTHING;
+
+DROP TABLE temp_underwear;
+
+-- ============================================================================
+-- CLEANUP: remove temporary hash column
+-- ============================================================================
+ALTER TABLE product_variants DROP COLUMN temp_hash;
+
+-- ============================================================================
+-- FINAL CHECK
+-- ============================================================================
+DO $$
+DECLARE
+    cnt BIGINT;
+BEGIN
+    SELECT COUNT(*) INTO cnt FROM product_variants;
+    RAISE NOTICE 'Total product variants inserted: %', cnt;
+END $$;

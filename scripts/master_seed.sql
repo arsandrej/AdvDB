@@ -4,7 +4,7 @@
 \echo '========================================='
 
 \echo 'Warehouses structure'
-\ir warehouses/seed_warehouse_structure.sql
+\ir warehouses/warehouse_structure.sql
 
 \echo 'Employees'
 \ir employees/employees_seed.sql
