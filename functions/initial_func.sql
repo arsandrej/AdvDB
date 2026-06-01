@@ -1,7 +1,16 @@
 -- =============================================================================
--- 2. CUSTOM TYPES FOR PROCEDURE PARAMETERS
+-- 0. ONE-TIME SETUP: DUMMY EMPLOYEE FOR CANCELLATION MARKER
 -- =============================================================================
--- Used for receipt, shipment and transfer operations
+-- This employee represents a system cancellation and is never a real person.
+-- The ID -1 will be used as a sentinel value in accepted_by.
+INSERT INTO EMPLOYEES (id, employee_number, first_name, last_name, email, job_title, employment_status, hired_at)
+VALUES (-1, 'CANCELLATION', 'System', 'Cancellation', 'no-reply@system.local', 'System Account', 'INACTIVE',
+        CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================================
+-- 1. CUSTOM TYPES FOR PROCEDURE PARAMETERS
+-- =============================================================================
 CREATE TYPE movement_item AS
 (
     product_variant_id BIGINT,
@@ -10,7 +19,6 @@ CREATE TYPE movement_item AS
     quantity           INT
 );
 
--- Used for inventory adjustments (positive = add, negative = subtract)
 CREATE TYPE adjustment_item AS
 (
     product_variant_id BIGINT,
@@ -19,9 +27,8 @@ CREATE TYPE adjustment_item AS
 );
 
 -- =============================================================================
--- 3. UPDATED_AT TRIGGERS (BASIC)
+-- 2. UPDATED_AT TRIGGERS (unchanged)
 -- =============================================================================
--- Generic trigger function
 CREATE OR REPLACE FUNCTION update_timestamp()
     RETURNS TRIGGER AS
 $$
@@ -31,31 +38,35 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Apply to tables that have an updated_at column
+DROP TRIGGER IF EXISTS trg_products_updated_at ON PRODUCTS;
 CREATE TRIGGER trg_products_updated_at
     BEFORE UPDATE
     ON PRODUCTS
     FOR EACH ROW
 EXECUTE FUNCTION update_timestamp();
 
+DROP TRIGGER IF EXISTS trg_employees_updated_at ON EMPLOYEES;
 CREATE TRIGGER trg_employees_updated_at
     BEFORE UPDATE
     ON EMPLOYEES
     FOR EACH ROW
 EXECUTE FUNCTION update_timestamp();
 
+DROP TRIGGER IF EXISTS trg_employee_warehouse_assignments_updated_at ON EMPLOYEE_WAREHOUSE_ASSIGNMENTS;
 CREATE TRIGGER trg_employee_warehouse_assignments_updated_at
     BEFORE UPDATE
     ON EMPLOYEE_WAREHOUSE_ASSIGNMENTS
     FOR EACH ROW
 EXECUTE FUNCTION update_timestamp();
 
+DROP TRIGGER IF EXISTS trg_roles_updated_at ON ROLES;
 CREATE TRIGGER trg_roles_updated_at
     BEFORE UPDATE
     ON ROLES
     FOR EACH ROW
 EXECUTE FUNCTION update_timestamp();
 
+DROP TRIGGER IF EXISTS trg_permissions_updated_at ON PERMISSIONS;
 CREATE TRIGGER trg_permissions_updated_at
     BEFORE UPDATE
     ON PERMISSIONS
@@ -63,84 +74,165 @@ CREATE TRIGGER trg_permissions_updated_at
 EXECUTE FUNCTION update_timestamp();
 
 -- =============================================================================
--- 4. INVENTORY MOVEMENT TRIGGERS
+-- 3. BLOCK MOVEMENTS FOR DISCONTINUED VARIANTS (kept)
 -- =============================================================================
-
--- 4a. BEFORE INSERT: validate that the source bin has enough available stock
-CREATE OR REPLACE FUNCTION validate_inventory_movement()
-    RETURNS TRIGGER AS
+CREATE OR REPLACE FUNCTION fn_block_discontinued_movement()
+    RETURNS TRIGGER
+    LANGUAGE plpgsql AS
 $$
 DECLARE
-    available INT;
+    v_status VARCHAR(50);
+    v_sku    VARCHAR(63);
 BEGIN
-    -- Only check when there is a source bin
-    IF NEW.from_bin_id IS NOT NULL THEN
-        SELECT (quantity - reserved_quantity)
-        INTO available
-        FROM INVENTORY
-        WHERE product_variant_id = NEW.product_variant_id
-          AND bin_id = NEW.from_bin_id
-            FOR UPDATE; -- lock the row to prevent race conditions
+    SELECT status, sku
+    INTO v_status, v_sku
+    FROM PRODUCT_VARIANTS
+    WHERE id = NEW.product_variant_id;
 
-        IF NOT FOUND THEN
-            RAISE EXCEPTION 'Insufficient stock: variant % has no inventory in bin %',
-                NEW.product_variant_id, NEW.from_bin_id;
-        END IF;
-
-        IF available < NEW.quantity THEN
-            RAISE EXCEPTION 'Insufficient stock: variant % in bin % has % available, but % requested',
-                NEW.product_variant_id, NEW.from_bin_id, available, NEW.quantity;
-        END IF;
+    IF v_status = 'discontinued' THEN
+        RAISE EXCEPTION
+            'Cannot record movement for discontinued variant id=% (sku=%). Reactivate the variant first.',
+            NEW.product_variant_id, v_sku;
     END IF;
-
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
-CREATE TRIGGER trg_inventory_movement_before_insert
+DROP TRIGGER IF EXISTS trg_block_discontinued_movement ON INVENTORY_MOVEMENTS;
+CREATE TRIGGER trg_block_discontinued_movement
     BEFORE INSERT
     ON INVENTORY_MOVEMENTS
     FOR EACH ROW
-EXECUTE FUNCTION validate_inventory_movement();
+EXECUTE FUNCTION fn_block_discontinued_movement();
 
--- 4b. AFTER INSERT: adjust inventory quantities automatically
-CREATE OR REPLACE FUNCTION update_inventory_on_movement()
-    RETURNS TRIGGER AS
+-- =============================================================================
+-- 4. REMOVE OLD INVENTORY TRIGGERS
+-- =============================================================================
+DROP TRIGGER IF EXISTS trg_inventory_movement_before_insert ON INVENTORY_MOVEMENTS;
+DROP TRIGGER IF EXISTS trg_inventory_movement_after_insert ON INVENTORY_MOVEMENTS;
+DROP FUNCTION IF EXISTS validate_inventory_movement();
+DROP FUNCTION IF EXISTS update_inventory_on_movement();
+
+-- =============================================================================
+-- 5. APPROVAL FUNCTION (consumes reserved stock)
+-- =============================================================================
+CREATE OR REPLACE FUNCTION approve_inventory_transaction(
+    p_transaction_id BIGINT,
+    p_approving_employee_id BIGINT
+)
+    RETURNS VOID
+    LANGUAGE plpgsql
+AS
 $$
+DECLARE
+    v_rec RECORD;
 BEGIN
-    -- Decrease source bin quantity
-    IF NEW.from_bin_id IS NOT NULL THEN
-        UPDATE INVENTORY
-        SET quantity   = quantity - NEW.quantity,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE product_variant_id = NEW.product_variant_id
-          AND bin_id = NEW.from_bin_id;
+    -- Must be pending (accepted_by IS NULL)
+    IF NOT EXISTS (SELECT 1
+                   FROM INVENTORY_TRANSACTIONS
+                   WHERE id = p_transaction_id
+                     AND accepted_by IS NULL) THEN
+        RAISE EXCEPTION 'Transaction % does not exist or is already approved/cancelled', p_transaction_id;
     END IF;
 
-    -- Increase destination bin quantity (create row if necessary)
-    IF NEW.to_bin_id IS NOT NULL THEN
-        INSERT INTO INVENTORY (product_variant_id, bin_id, quantity, reserved_quantity, status)
-        VALUES (NEW.product_variant_id, NEW.to_bin_id, NEW.quantity, 0, 'AVAILABLE')
-        ON CONFLICT (product_variant_id, bin_id) DO UPDATE
-            SET quantity   = INVENTORY.quantity + EXCLUDED.quantity,
-                updated_at = CURRENT_TIMESTAMP;
-    END IF;
+    FOR v_rec IN
+        SELECT id, product_variant_id, from_bin_id, to_bin_id, quantity
+        FROM INVENTORY_MOVEMENTS
+        WHERE inventory_transactions_id = p_transaction_id
+        ORDER BY id
+            FOR UPDATE OF INVENTORY_MOVEMENTS
+        LOOP
+            -- Source bin: decrease quantity and reserved_quantity
+            IF v_rec.from_bin_id IS NOT NULL THEN
+                UPDATE INVENTORY
+                SET quantity          = quantity - v_rec.quantity,
+                    reserved_quantity = reserved_quantity - v_rec.quantity,
+                    updated_at        = CURRENT_TIMESTAMP
+                WHERE product_variant_id = v_rec.product_variant_id
+                  AND bin_id = v_rec.from_bin_id
+                  AND reserved_quantity >= v_rec.quantity;
+                IF NOT FOUND THEN
+                    RAISE EXCEPTION 'Reservation inconsistency for variant % bin % in transaction %',
+                        v_rec.product_variant_id, v_rec.from_bin_id, p_transaction_id;
+                END IF;
+            END IF;
 
-    RETURN NEW;
+            -- Destination bin: increase quantity
+            IF v_rec.to_bin_id IS NOT NULL THEN
+                INSERT INTO INVENTORY (product_variant_id, bin_id, quantity, reserved_quantity, status)
+                VALUES (v_rec.product_variant_id, v_rec.to_bin_id, v_rec.quantity, 0, 'AVAILABLE')
+                ON CONFLICT (product_variant_id, bin_id) DO UPDATE
+                    SET quantity   = INVENTORY.quantity + EXCLUDED.quantity,
+                        updated_at = CURRENT_TIMESTAMP;
+            END IF;
+        END LOOP;
+
+    -- Mark transaction as approved
+    UPDATE INVENTORY_TRANSACTIONS
+    SET accepted_by     = p_approving_employee_id,
+        last_updated_by = p_approving_employee_id
+    WHERE id = p_transaction_id;
 END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_inventory_movement_after_insert
-    AFTER INSERT
-    ON INVENTORY_MOVEMENTS
-    FOR EACH ROW
-EXECUTE FUNCTION update_inventory_on_movement();
+$$;
 
 -- =============================================================================
--- 5. INVENTORY OPERATION PROCEDURES
+-- 6. CANCELLATION FUNCTION (marks as cancelled using accepted_by = -1)
+-- =============================================================================
+-- Note: accepted_by = -1 is a sentinel value representing a cancelled transaction.
+-- The dummy employee with id = -1 must exist (see setup at top of file).
+CREATE OR REPLACE FUNCTION cancel_pending_transaction(
+    p_transaction_id BIGINT,
+    p_cancelled_by_employee BIGINT
+)
+    RETURNS VOID
+    LANGUAGE plpgsql
+AS
+$$
+DECLARE
+    v_rec RECORD;
+BEGIN
+    -- Only pending transactions (accepted_by IS NULL) can be cancelled
+    IF NOT EXISTS (SELECT 1
+                   FROM INVENTORY_TRANSACTIONS
+                   WHERE id = p_transaction_id
+                     AND accepted_by IS NULL) THEN
+        RAISE EXCEPTION 'Transaction % cannot be cancelled (not pending or already approved/cancelled)', p_transaction_id;
+    END IF;
+
+    -- Release reservations for all movements with a source bin
+    FOR v_rec IN
+        SELECT product_variant_id, from_bin_id, quantity
+        FROM INVENTORY_MOVEMENTS
+        WHERE inventory_transactions_id = p_transaction_id
+          AND from_bin_id IS NOT NULL
+        LOOP
+            UPDATE INVENTORY
+            SET reserved_quantity = reserved_quantity - v_rec.quantity,
+                updated_at        = CURRENT_TIMESTAMP
+            WHERE product_variant_id = v_rec.product_variant_id
+              AND bin_id = v_rec.from_bin_id
+              AND reserved_quantity >= v_rec.quantity;
+            IF NOT FOUND THEN
+                RAISE WARNING 'Failed to release reservation for variant % bin % (quantity %) in transaction %',
+                    v_rec.product_variant_id, v_rec.from_bin_id, v_rec.quantity, p_transaction_id;
+            END IF;
+        END LOOP;
+
+    -- Mark transaction as cancelled using sentinel employee -1
+    UPDATE INVENTORY_TRANSACTIONS
+    SET accepted_by     = -1,
+        last_updated_by = p_cancelled_by_employee,
+        notes           = COALESCE(notes, '') || E'\n[CANCELLED by employee ' || p_cancelled_by_employee || ' at ' ||
+                          CURRENT_TIMESTAMP || ']'
+    WHERE id = p_transaction_id;
+END;
+$$;
+
+-- =============================================================================
+-- 7. CREATION FUNCTIONS (pending, with stock reservation)
 -- =============================================================================
 
--- 5a. Receive a delivery from a supplier
+-- 7a. Receive a delivery (no reservation)
 CREATE OR REPLACE FUNCTION receive_delivery(
     p_supplier_company TEXT,
     p_delivery_note TEXT,
@@ -153,16 +245,13 @@ DECLARE
     v_transaction_id BIGINT;
     item             movement_item;
 BEGIN
-    -- Create the transaction header
-    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes)
-    VALUES ('RECEIPT', p_created_by_employee, 'Delivery receipt')
+    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes, accepted_by)
+    VALUES ('RECEIPT', p_created_by_employee, 'Delivery receipt', NULL)
     RETURNING id INTO v_transaction_id;
 
-    -- Create delivery-specific record
     INSERT INTO DELIVERY_TRANSACTIONS (inventory_transactions_id, supplier_company, delivery_note)
     VALUES (v_transaction_id, p_supplier_company, p_delivery_note);
 
-    -- Insert a movement for each item (from_bin_id must be NULL, to_bin_id required)
     FOREACH item IN ARRAY p_items
         LOOP
             IF item.from_bin_id IS NOT NULL OR item.to_bin_id IS NULL THEN
@@ -177,7 +266,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 5b. Ship stock to a customer/destination
+-- 7b. Ship stock (reserve from source bin)
 CREATE OR REPLACE FUNCTION ship_stock(
     p_destination_address TEXT,
     p_shipment_number BIGINT,
@@ -189,20 +278,34 @@ $$
 DECLARE
     v_transaction_id BIGINT;
     item             movement_item;
+    v_available      INT;
 BEGIN
-    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes)
-    VALUES ('SHIPMENT', p_created_by_employee, 'Customer shipment')
+    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes, accepted_by)
+    VALUES ('SHIPMENT', p_created_by_employee, 'Customer shipment', NULL)
     RETURNING id INTO v_transaction_id;
 
     INSERT INTO SHIPMENT_TRANSACTIONS (inventory_transactions_id, destination_adress, shipment_number)
     VALUES (v_transaction_id, p_destination_address, p_shipment_number);
 
-    -- For shipments, from_bin_id required, to_bin_id must be NULL
     FOREACH item IN ARRAY p_items
         LOOP
             IF item.from_bin_id IS NULL OR item.to_bin_id IS NOT NULL THEN
                 RAISE EXCEPTION 'Invalid shipment item: from_bin_id must be set and to_bin_id must be NULL';
             END IF;
+
+            UPDATE INVENTORY
+            SET reserved_quantity = reserved_quantity + item.quantity,
+                updated_at        = CURRENT_TIMESTAMP
+            WHERE product_variant_id = item.product_variant_id
+              AND bin_id = item.from_bin_id
+              AND (quantity - reserved_quantity) >= item.quantity
+            RETURNING (quantity - reserved_quantity + item.quantity) INTO v_available;
+
+            IF NOT FOUND THEN
+                RAISE EXCEPTION 'Insufficient stock for variant % in bin % (need %)',
+                    item.product_variant_id, item.from_bin_id, item.quantity;
+            END IF;
+
             INSERT INTO INVENTORY_MOVEMENTS (product_variant_id, from_bin_id, to_bin_id, quantity,
                                              inventory_transactions_id)
             VALUES (item.product_variant_id, item.from_bin_id, NULL, item.quantity, v_transaction_id);
@@ -212,7 +315,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 5c. Internal transfer between bins
+-- 7c. Internal transfer (reserve from source bin)
 CREATE OR REPLACE FUNCTION transfer_stock(
     p_created_by_employee BIGINT,
     p_items movement_item[]
@@ -222,17 +325,31 @@ $$
 DECLARE
     v_transaction_id BIGINT;
     item             movement_item;
+    v_available      INT;
 BEGIN
-    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes)
-    VALUES ('TRANSFER', p_created_by_employee, 'Internal transfer')
+    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes, accepted_by)
+    VALUES ('TRANSFER', p_created_by_employee, 'Internal transfer', NULL)
     RETURNING id INTO v_transaction_id;
 
-    -- Both bins must be provided and must differ (also enforced by CHECK constraint)
     FOREACH item IN ARRAY p_items
         LOOP
             IF item.from_bin_id IS NULL OR item.to_bin_id IS NULL THEN
                 RAISE EXCEPTION 'Invalid transfer item: both from_bin_id and to_bin_id must be set';
             END IF;
+
+            UPDATE INVENTORY
+            SET reserved_quantity = reserved_quantity + item.quantity,
+                updated_at        = CURRENT_TIMESTAMP
+            WHERE product_variant_id = item.product_variant_id
+              AND bin_id = item.from_bin_id
+              AND (quantity - reserved_quantity) >= item.quantity
+            RETURNING (quantity - reserved_quantity + item.quantity) INTO v_available;
+
+            IF NOT FOUND THEN
+                RAISE EXCEPTION 'Insufficient stock for variant % in bin % (need %)',
+                    item.product_variant_id, item.from_bin_id, item.quantity;
+            END IF;
+
             INSERT INTO INVENTORY_MOVEMENTS (product_variant_id, from_bin_id, to_bin_id, quantity,
                                              inventory_transactions_id)
             VALUES (item.product_variant_id, item.from_bin_id, item.to_bin_id, item.quantity, v_transaction_id);
@@ -242,7 +359,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 5d. Manual inventory adjustment / correction
+-- 7d. Manual inventory adjustment (reserve for negative changes)
 CREATE OR REPLACE FUNCTION adjust_inventory(
     p_created_by_employee BIGINT,
     p_notes TEXT,
@@ -253,21 +370,32 @@ $$
 DECLARE
     v_transaction_id BIGINT;
     item             adjustment_item;
+    v_available      INT;
 BEGIN
-    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes)
-    VALUES ('ADJUSTMENT', p_created_by_employee, p_notes)
+    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes, accepted_by)
+    VALUES ('ADJUSTMENT', p_created_by_employee, p_notes, NULL)
     RETURNING id INTO v_transaction_id;
 
-    -- Convert positive/negative changes into appropriate movements
     FOREACH item IN ARRAY p_items
         LOOP
             IF item.quantity_change > 0 THEN
-                -- Add stock: movement from NULL to bin
                 INSERT INTO INVENTORY_MOVEMENTS (product_variant_id, from_bin_id, to_bin_id, quantity,
                                                  inventory_transactions_id)
                 VALUES (item.product_variant_id, NULL, item.bin_id, item.quantity_change, v_transaction_id);
             ELSIF item.quantity_change < 0 THEN
-                -- Subtract stock: movement from bin to NULL
+                UPDATE INVENTORY
+                SET reserved_quantity = reserved_quantity + ABS(item.quantity_change),
+                    updated_at        = CURRENT_TIMESTAMP
+                WHERE product_variant_id = item.product_variant_id
+                  AND bin_id = item.bin_id
+                  AND (quantity - reserved_quantity) >= ABS(item.quantity_change)
+                RETURNING (quantity - reserved_quantity + ABS(item.quantity_change)) INTO v_available;
+
+                IF NOT FOUND THEN
+                    RAISE EXCEPTION 'Insufficient stock for variant % in bin % (need %)',
+                        item.product_variant_id, item.bin_id, ABS(item.quantity_change);
+                END IF;
+
                 INSERT INTO INVENTORY_MOVEMENTS (product_variant_id, from_bin_id, to_bin_id, quantity,
                                                  inventory_transactions_id)
                 VALUES (item.product_variant_id, item.bin_id, NULL, ABS(item.quantity_change), v_transaction_id);
@@ -279,9 +407,8 @@ BEGIN
     RETURN v_transaction_id;
 END;
 $$ LANGUAGE plpgsql;
-
 -- =============================================================================
--- 6. PRODUCT CATALOG PROCEDURES (BASIC CREATE/UPDATE)
+--  PRODUCT CATALOG PROCEDURES (BASIC CREATE/UPDATE)
 -- =============================================================================
 
 -- Products
