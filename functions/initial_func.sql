@@ -9,7 +9,7 @@ VALUES (-1, 'CANCELLATION', 'System', 'Cancellation', 'no-reply@system.local', '
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================
--- 1. CUSTOM TYPES FOR PROCEDURE PARAMETERS
+-- 1. CUSTOM TYPES
 -- =============================================================================
 CREATE TYPE movement_item AS
 (
@@ -74,13 +74,12 @@ CREATE TRIGGER trg_permissions_updated_at
 EXECUTE FUNCTION update_timestamp();
 
 -- =============================================================================
--- 5. APPROVAL FUNCTION (consumes reserved stock)
+-- 5. APPROVAL Procedure (consumes reserved stock)
 -- =============================================================================
-CREATE OR REPLACE FUNCTION approve_inventory_transaction(
+CREATE OR REPLACE PROCEDURE  approve_inventory_transaction(
     p_transaction_id BIGINT,
     p_approving_employee_id BIGINT
 )
-    RETURNS VOID
     LANGUAGE plpgsql
 AS
 $$
@@ -136,15 +135,14 @@ END;
 $$;
 
 -- =============================================================================
--- 6. CANCELLATION FUNCTION (marks as cancelled using accepted_by = -1)
+-- 6. CANCELLATION PROCEDURE (marks as cancelled using accepted_by = -1)
 -- =============================================================================
 -- Note: accepted_by = -1 is a sentinel value representing a cancelled transaction.
 -- The dummy employee with id = -1 must exist (see setup at top of file).
-CREATE OR REPLACE FUNCTION cancel_pending_transaction(
+CREATE OR REPLACE PROCEDURE cancel_pending_transaction(
     p_transaction_id BIGINT,
     p_cancelled_by_employee BIGINT
 )
-    RETURNS VOID
     LANGUAGE plpgsql
 AS
 $$
