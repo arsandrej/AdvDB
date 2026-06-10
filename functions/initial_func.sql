@@ -1,15 +1,5 @@
 -- =============================================================================
--- ONE-TIME SETUP: DUMMY EMPLOYEE FOR CANCELLATION MARKER
--- =============================================================================
--- This employee represents a system cancellation and is never a real person.
--- The ID -1 will be used as a sentinel value in accepted_by.
-INSERT INTO EMPLOYEES (id, employee_number, first_name, last_name, email, job_title, employment_status, hired_at)
-VALUES (-1, 'CANCELLATION', 'System', 'Cancellation', 'no-reply@system.local', 'System Account', 'INACTIVE',
-        CURRENT_TIMESTAMP)
-ON CONFLICT (id) DO NOTHING;
-
--- =============================================================================
--- CUSTOM TYPES
+-- Custom Type Items
 -- =============================================================================
 CREATE TYPE movement_item AS
 (
@@ -27,7 +17,7 @@ CREATE TYPE adjustment_item AS
 );
 
 -- =============================================================================
--- UPDATED_AT TRIGGERS
+-- Updated at Triggers
 -- =============================================================================
 CREATE OR REPLACE FUNCTION update_timestamp()
     RETURNS TRIGGER AS
@@ -79,11 +69,10 @@ CREATE TRIGGER trg_inventory_updated_at
     ON INVENTORY
     FOR EACH ROW
 EXECUTE FUNCTION update_timestamp();
-
 -- =============================================================================
--- APPROVAL Procedure (consumes reserved stock)
+-- Approval Procedure (consumes reserved stock)
 -- =============================================================================
-CREATE OR REPLACE PROCEDURE  approve_inventory_transaction(
+CREATE OR REPLACE PROCEDURE approve_inventory_transaction(
     p_transaction_id BIGINT,
     p_approving_employee_id BIGINT
 )
@@ -93,12 +82,12 @@ $$
 DECLARE
     v_rec RECORD;
 BEGIN
-    -- Must be pending (accepted_by IS NULL)
+    -- Must be pending
     IF NOT EXISTS (SELECT 1
                    FROM INVENTORY_TRANSACTIONS
                    WHERE id = p_transaction_id
-                     AND accepted_by IS NULL) THEN
-        RAISE EXCEPTION 'Transaction % does not exist or is already approved/cancelled', p_transaction_id;
+                     AND status = 'PENDING') THEN
+        RAISE EXCEPTION 'Transaction % does not exist or is not pending', p_transaction_id;
     END IF;
 
     FOR v_rec IN
@@ -135,17 +124,16 @@ BEGIN
 
     -- Mark transaction as approved
     UPDATE INVENTORY_TRANSACTIONS
-    SET accepted_by     = p_approving_employee_id,
+    SET status          = 'APPROVED',
+        accepted_by     = p_approving_employee_id,
         last_updated_by = p_approving_employee_id
     WHERE id = p_transaction_id;
 END;
 $$;
 
 -- =============================================================================
--- CANCELLATION PROCEDURE (marks as cancelled using accepted_by = -1)
+-- Cancellation functions (marks as cancelled using status column)
 -- =============================================================================
--- Note: accepted_by = -1 is a sentinel value representing a cancelled transaction.
--- The dummy employee with id = -1 must exist (see setup at top of file).
 CREATE OR REPLACE PROCEDURE cancel_pending_transaction(
     p_transaction_id BIGINT,
     p_cancelled_by_employee BIGINT
@@ -156,12 +144,12 @@ $$
 DECLARE
     v_rec RECORD;
 BEGIN
-    -- Only pending transactions (accepted_by IS NULL) can be cancelled
+    -- Only pending transactions can be cancelled
     IF NOT EXISTS (SELECT 1
                    FROM INVENTORY_TRANSACTIONS
                    WHERE id = p_transaction_id
-                     AND accepted_by IS NULL) THEN
-        RAISE EXCEPTION 'Transaction % cannot be cancelled (not pending or already approved/cancelled)', p_transaction_id;
+                     AND status = 'PENDING') THEN
+        RAISE EXCEPTION 'Transaction % cannot be cancelled (not pending)', p_transaction_id;
     END IF;
 
     -- Release reservations for all movements with a source bin
@@ -183,9 +171,9 @@ BEGIN
             END IF;
         END LOOP;
 
-    -- Mark transaction as cancelled using sentinel employee -1
+    -- Mark transaction as cancelled
     UPDATE INVENTORY_TRANSACTIONS
-    SET accepted_by     = -1,
+    SET status          = 'CANCELLED',
         last_updated_by = p_cancelled_by_employee,
         notes           = COALESCE(notes, '') || E'\n[CANCELLED by employee ' || p_cancelled_by_employee || ' at ' ||
                           CURRENT_TIMESTAMP || ']'
@@ -194,7 +182,7 @@ END;
 $$;
 
 -- =============================================================================
--- CREATION FUNCTIONS (pending, with stock reservation)
+-- Creation Functions (pending, with stock reservation)
 -- =============================================================================
 
 -- a. Receive a delivery (no reservation)
@@ -210,8 +198,8 @@ DECLARE
     v_transaction_id BIGINT;
     item             movement_item;
 BEGIN
-    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes, accepted_by)
-    VALUES ('RECEIPT', p_created_by_employee, 'Delivery receipt', NULL)
+    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes, status)
+    VALUES ('RECEIPT', p_created_by_employee, 'Delivery receipt', 'PENDING')
     RETURNING id INTO v_transaction_id;
 
     INSERT INTO DELIVERY_TRANSACTIONS (inventory_transactions_id, supplier_company, delivery_note)
@@ -245,8 +233,8 @@ DECLARE
     item             movement_item;
     v_available      INT;
 BEGIN
-    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes, accepted_by)
-    VALUES ('SHIPMENT', p_created_by_employee, 'Customer shipment', NULL)
+    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes, status)
+    VALUES ('SHIPMENT', p_created_by_employee, 'Customer shipment', 'PENDING')
     RETURNING id INTO v_transaction_id;
 
     INSERT INTO SHIPMENT_TRANSACTIONS (inventory_transactions_id, destination_adress, shipment_number)
@@ -292,8 +280,8 @@ DECLARE
     item             movement_item;
     v_available      INT;
 BEGIN
-    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes, accepted_by)
-    VALUES ('TRANSFER', p_created_by_employee, 'Internal transfer', NULL)
+    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes, status)
+    VALUES ('TRANSFER', p_created_by_employee, 'Internal transfer', 'PENDING')
     RETURNING id INTO v_transaction_id;
 
     FOREACH item IN ARRAY p_items
@@ -337,8 +325,8 @@ DECLARE
     item             adjustment_item;
     v_available      INT;
 BEGIN
-    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes, accepted_by)
-    VALUES ('ADJUSTMENT', p_created_by_employee, p_notes, NULL)
+    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes, status)
+    VALUES ('ADJUSTMENT', p_created_by_employee, p_notes, 'PENDING')
     RETURNING id INTO v_transaction_id;
 
     FOREACH item IN ARRAY p_items
@@ -374,7 +362,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- =============================================================================
---  PRODUCT CATALOG
+--  Product Catalog
 -- =============================================================================
 
 -- Products
@@ -475,7 +463,7 @@ CREATE OR REPLACE PROCEDURE update_product_variant(
     p_weight NUMERIC(10, 2) DEFAULT NULL,
     p_status TEXT DEFAULT 'ACTIVE'
 )
-   AS
+AS
 $$
 UPDATE PRODUCT_VARIANTS
 SET sku      = p_sku,
@@ -489,7 +477,7 @@ $$ LANGUAGE sql;
 
 -- Variant attributes
 CREATE OR REPLACE PROCEDURE assign_variant_attribute(p_variant_id BIGINT, p_attribute_value_id BIGINT)
-     AS
+AS
 $$
 DECLARE
     v_attribute_id BIGINT;

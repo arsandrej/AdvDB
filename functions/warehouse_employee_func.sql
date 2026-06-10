@@ -77,7 +77,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Update basic employee info (excluding termination fields)
-CREATE OR REPLACE FUNCTION update_employee(
+CREATE OR REPLACE PROCEDURE update_employee(
     p_employee_id BIGINT,
     p_first_name TEXT,
     p_last_name TEXT,
@@ -87,35 +87,30 @@ CREATE OR REPLACE FUNCTION update_employee(
     p_employment_status TEXT DEFAULT 'active',
     p_manager_id BIGINT DEFAULT NULL
 )
-    RETURNS VOID AS
+    LANGUAGE plpgsql AS
 $$
 DECLARE
     v_current_status TEXT;
     v_status_lower   TEXT;
 BEGIN
-    -- Get current status
     SELECT employment_status INTO v_current_status FROM employees WHERE id = p_employee_id;
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Employee with id % does not exist', p_employee_id;
     END IF;
 
-    -- Cannot update a terminated employee (except to reactivate via hire_employee)
     IF v_current_status = 'terminated' THEN
         RAISE EXCEPTION 'Cannot update a terminated employee.';
     END IF;
 
-    -- Validate new status
     v_status_lower := LOWER(TRIM(p_employment_status));
     IF v_status_lower NOT IN ('active', 'on_leave', 'terminated') THEN
         RAISE EXCEPTION 'Invalid employment_status: %. Allowed: active, on_leave, terminated', p_employment_status;
     END IF;
 
-    -- Manager self‑check
     IF p_manager_id IS NOT NULL AND p_manager_id = p_employee_id THEN
         RAISE EXCEPTION 'Employee cannot be their own manager';
     END IF;
 
-    -- Update
     UPDATE employees
     SET first_name        = p_first_name,
         last_name         = p_last_name,
@@ -127,14 +122,14 @@ BEGIN
         updated_at        = CURRENT_TIMESTAMP
     WHERE id = p_employee_id;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- Terminate an employee and close all active warehouse assignments
-CREATE OR REPLACE FUNCTION terminate_employee(
+CREATE OR REPLACE PROCEDURE terminate_employee(
     p_employee_id BIGINT,
     p_terminated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
-    RETURNS VOID AS
+    LANGUAGE plpgsql AS
 $$
 DECLARE
     v_current_status TEXT;
@@ -148,20 +143,18 @@ BEGIN
         RAISE EXCEPTION 'Employee is already terminated';
     END IF;
 
-    -- Close all active warehouse assignments (end_date IS NULL)
     UPDATE employee_warehouse_assignments
     SET end_date = p_terminated_at::DATE
     WHERE employee_id = p_employee_id
       AND end_date IS NULL;
 
-    -- Update employee status
     UPDATE employees
     SET employment_status = 'terminated',
         terminated_at     = p_terminated_at,
         updated_at        = CURRENT_TIMESTAMP
     WHERE id = p_employee_id;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- Assign employee to a warehouse with overlap checks
 CREATE OR REPLACE FUNCTION assign_employee_to_warehouse(
@@ -202,11 +195,11 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- End an assignment (with validation)
-CREATE OR REPLACE FUNCTION end_warehouse_assignment(
+CREATE OR REPLACE PROCEDURE end_warehouse_assignment(
     p_assignment_id BIGINT,
     p_end_date DATE DEFAULT CURRENT_DATE
 )
-    RETURNS VOID AS
+    LANGUAGE plpgsql AS
 $$
 DECLARE
     v_start_date  DATE;
@@ -229,21 +222,19 @@ BEGIN
     SET end_date = p_end_date
     WHERE id = p_assignment_id;
 END;
-$$ LANGUAGE plpgsql;
-
+$$;
 
 ---===============================
 --- Role & Permission Functions
 ---===============================
 -- Assign a role to an employee
-CREATE OR REPLACE FUNCTION assign_role_to_employee(
+CREATE OR REPLACE PROCEDURE assign_role_to_employee(
     p_role_id INT,
     p_employee_id BIGINT
 )
-    RETURNS VOID AS
+    LANGUAGE plpgsql AS
 $$
 BEGIN
-    -- Optional: check existence (FK would error anyway, but custom message)
     IF NOT EXISTS (SELECT 1 FROM roles WHERE id = p_role_id) THEN
         RAISE EXCEPTION 'Role with id % does not exist', p_role_id;
     END IF;
@@ -253,16 +244,16 @@ BEGIN
 
     INSERT INTO roles_employees (roles_id, employees_id)
     VALUES (p_role_id, p_employee_id)
-    ON CONFLICT DO NOTHING; -- Silently ignore duplicate
+    ON CONFLICT DO NOTHING;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- Remove a role from an employee
-CREATE OR REPLACE FUNCTION remove_role_from_employee(
+CREATE OR REPLACE PROCEDURE remove_role_from_employee(
     p_role_id INT,
     p_employee_id BIGINT
 )
-    RETURNS VOID AS
+    LANGUAGE plpgsql AS
 $$
 BEGIN
     DELETE
@@ -273,14 +264,14 @@ BEGIN
         RAISE NOTICE 'Role % was not assigned to employee %', p_role_id, p_employee_id;
     END IF;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- Assign a permission to a role
-CREATE OR REPLACE FUNCTION assign_permission_to_role(
+CREATE OR REPLACE PROCEDURE assign_permission_to_role(
     p_permission_id INT,
     p_role_id INT
 )
-    RETURNS VOID AS
+    LANGUAGE plpgsql AS
 $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM permissions WHERE id = p_permission_id) THEN
@@ -294,22 +285,25 @@ BEGIN
     VALUES (p_permission_id, p_role_id)
     ON CONFLICT DO NOTHING;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- Remove a permission from a role
-CREATE OR REPLACE FUNCTION remove_permission_from_role(
+CREATE OR REPLACE PROCEDURE remove_permission_from_role(
     p_permission_id INT,
     p_role_id INT
 )
-RETURNS VOID AS $$
+    LANGUAGE plpgsql AS
+$$
 BEGIN
-    DELETE FROM permissions_roles
-    WHERE permissions_id = p_permission_id AND roles_id = p_role_id;
+    DELETE
+    FROM permissions_roles
+    WHERE permissions_id = p_permission_id
+      AND roles_id = p_role_id;
     IF NOT FOUND THEN
         RAISE NOTICE 'Permission % was not assigned to role %', p_permission_id, p_role_id;
     END IF;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- =============================================================================
 -- Warehouse Functions
@@ -331,24 +325,22 @@ RETURNING id;
 $$
     LANGUAGE sql;
 
-CREATE
-    OR REPLACE FUNCTION update_warehouse(
+CREATE OR REPLACE PROCEDURE update_warehouse(
     p_id BIGINT,
     p_name TEXT,
     p_address TEXT DEFAULT NULL,
     p_city TEXT DEFAULT 'C',
     p_country TEXT DEFAULT 'C'
 )
-    RETURNS VOID AS
+    LANGUAGE sql AS
 $$
-UPDATE WAREHOUSES
+UPDATE warehouses
 SET name    = p_name,
     address = p_address,
     city    = p_city,
     country = p_country
 WHERE id = p_id;
-$$
-    LANGUAGE sql;
+$$;
 
 -- Sections
 CREATE
@@ -365,20 +357,18 @@ RETURNING id;
 $$
     LANGUAGE sql;
 
-CREATE
-    OR REPLACE FUNCTION update_section(
+CREATE OR REPLACE PROCEDURE update_section(
     p_id BIGINT,
     p_name TEXT,
     p_description TEXT DEFAULT NULL
 )
-    RETURNS VOID AS
+    LANGUAGE sql AS
 $$
-UPDATE SECTIONS
+UPDATE sections
 SET name        = p_name,
     description = p_description
 WHERE id = p_id;
-$$
-    LANGUAGE sql;
+$$;
 
 -- Locations
 CREATE
@@ -397,24 +387,23 @@ RETURNING id;
 $$
     LANGUAGE sql;
 
-CREATE
-    OR REPLACE FUNCTION update_location(
+CREATE OR REPLACE PROCEDURE update_location(
     p_id BIGINT,
     p_row_number INT,
     p_column_number INT,
     p_level_number INT,
     p_location_code TEXT
 )
-    RETURNS VOID AS
+    LANGUAGE sql AS
 $$
-UPDATE LOCATIONS
+UPDATE locations
 SET row_number    = p_row_number,
     column_number = p_column_number,
     level_number  = p_level_number,
     location_code = p_location_code
 WHERE id = p_id;
-$$
-    LANGUAGE sql;
+$$;
+
 
 -- Bins
 CREATE
@@ -431,17 +420,15 @@ RETURNING id;
 $$
     LANGUAGE sql;
 
-CREATE
-    OR REPLACE FUNCTION update_bin(
+CREATE OR REPLACE PROCEDURE update_bin(
     p_id BIGINT,
     p_bin_code TEXT,
     p_capacity INT
 )
-    RETURNS VOID AS
+    LANGUAGE sql AS
 $$
-UPDATE BINS
+UPDATE bins
 SET bin_code = p_bin_code,
     capacity = p_capacity
 WHERE id = p_id;
-$$
-    LANGUAGE sql;
+$$;
