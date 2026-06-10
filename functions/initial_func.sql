@@ -1,5 +1,5 @@
 -- =============================================================================
--- 0. ONE-TIME SETUP: DUMMY EMPLOYEE FOR CANCELLATION MARKER
+-- ONE-TIME SETUP: DUMMY EMPLOYEE FOR CANCELLATION MARKER
 -- =============================================================================
 -- This employee represents a system cancellation and is never a real person.
 -- The ID -1 will be used as a sentinel value in accepted_by.
@@ -9,7 +9,7 @@ VALUES (-1, 'CANCELLATION', 'System', 'Cancellation', 'no-reply@system.local', '
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================
--- 1. CUSTOM TYPES
+-- CUSTOM TYPES
 -- =============================================================================
 CREATE TYPE movement_item AS
 (
@@ -27,7 +27,7 @@ CREATE TYPE adjustment_item AS
 );
 
 -- =============================================================================
--- 2. UPDATED_AT TRIGGERS (unchanged)
+-- UPDATED_AT TRIGGERS
 -- =============================================================================
 CREATE OR REPLACE FUNCTION update_timestamp()
     RETURNS TRIGGER AS
@@ -73,8 +73,15 @@ CREATE TRIGGER trg_permissions_updated_at
     FOR EACH ROW
 EXECUTE FUNCTION update_timestamp();
 
+DROP TRIGGER IF EXISTS trg_inventory_updated_at ON INVENTORY;
+CREATE TRIGGER trg_inventory_updated_at
+    BEFORE UPDATE
+    ON INVENTORY
+    FOR EACH ROW
+EXECUTE FUNCTION update_timestamp();
+
 -- =============================================================================
--- 5. APPROVAL Procedure (consumes reserved stock)
+-- APPROVAL Procedure (consumes reserved stock)
 -- =============================================================================
 CREATE OR REPLACE PROCEDURE  approve_inventory_transaction(
     p_transaction_id BIGINT,
@@ -135,7 +142,7 @@ END;
 $$;
 
 -- =============================================================================
--- 6. CANCELLATION PROCEDURE (marks as cancelled using accepted_by = -1)
+-- CANCELLATION PROCEDURE (marks as cancelled using accepted_by = -1)
 -- =============================================================================
 -- Note: accepted_by = -1 is a sentinel value representing a cancelled transaction.
 -- The dummy employee with id = -1 must exist (see setup at top of file).
@@ -187,10 +194,10 @@ END;
 $$;
 
 -- =============================================================================
--- 7. CREATION FUNCTIONS (pending, with stock reservation)
+-- CREATION FUNCTIONS (pending, with stock reservation)
 -- =============================================================================
 
--- 7a. Receive a delivery (no reservation)
+-- a. Receive a delivery (no reservation)
 CREATE OR REPLACE FUNCTION receive_delivery(
     p_supplier_company TEXT,
     p_delivery_note TEXT,
@@ -224,7 +231,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 7b. Ship stock (reserve from source bin)
+-- b. Ship stock (reserve from source bin)
 CREATE OR REPLACE FUNCTION ship_stock(
     p_destination_address TEXT,
     p_shipment_number BIGINT,
@@ -273,7 +280,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 7c. Internal transfer (reserve from source bin)
+-- c. Internal transfer (reserve from source bin)
 CREATE OR REPLACE FUNCTION transfer_stock(
     p_created_by_employee BIGINT,
     p_items movement_item[]
@@ -317,7 +324,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 7d. Manual inventory adjustment (reserve for negative changes)
+-- d. Manual inventory adjustment (reserve for negative changes)
 CREATE OR REPLACE FUNCTION adjust_inventory(
     p_created_by_employee BIGINT,
     p_notes TEXT,
@@ -365,8 +372,9 @@ BEGIN
     RETURN v_transaction_id;
 END;
 $$ LANGUAGE plpgsql;
+
 -- =============================================================================
---  PRODUCT CATALOG PROCEDURES (BASIC CREATE/UPDATE)
+--  PRODUCT CATALOG
 -- =============================================================================
 
 -- Products
@@ -458,7 +466,7 @@ VALUES (p_product_id, p_sku, p_brand_id, p_barcode, p_price, p_weight, p_status)
 RETURNING id;
 $$ LANGUAGE sql;
 
-CREATE OR REPLACE FUNCTION update_product_variant(
+CREATE OR REPLACE PROCEDURE update_product_variant(
     p_variant_id BIGINT,
     p_sku TEXT,
     p_brand_id BIGINT,
@@ -467,7 +475,7 @@ CREATE OR REPLACE FUNCTION update_product_variant(
     p_weight NUMERIC(10, 2) DEFAULT NULL,
     p_status TEXT DEFAULT 'ACTIVE'
 )
-    RETURNS VOID AS
+   AS
 $$
 UPDATE PRODUCT_VARIANTS
 SET sku      = p_sku,
@@ -480,8 +488,8 @@ WHERE id = p_variant_id;
 $$ LANGUAGE sql;
 
 -- Variant attributes
-CREATE OR REPLACE FUNCTION assign_variant_attribute(p_variant_id BIGINT, p_attribute_value_id BIGINT)
-    RETURNS VOID AS
+CREATE OR REPLACE PROCEDURE assign_variant_attribute(p_variant_id BIGINT, p_attribute_value_id BIGINT)
+     AS
 $$
 DECLARE
     v_attribute_id BIGINT;
@@ -495,8 +503,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION remove_variant_attribute(p_variant_id BIGINT, p_attribute_value_id BIGINT)
-    RETURNS VOID AS
+CREATE OR REPLACE PROCEDURE remove_variant_attribute(p_variant_id BIGINT, p_attribute_value_id BIGINT)
+AS
 $$
 DELETE
 FROM VARIANT_ATTRIBUTES
