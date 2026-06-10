@@ -1,3 +1,194 @@
+INSERT INTO TRANSACTION_TYPES (code, description)
+VALUES
+    ('RECEIPT', 'Stock receipt'),
+    ('SHIPMENT', 'Customer shipment'),
+    ('TRANSFER', 'Internal transfer'),
+    ('ADJUSTMENT', 'Manual adjustment');
+
+
+
+-- Warehouse
+INSERT INTO WAREHOUSES (name, address, city, country)
+VALUES ('Main Warehouse', 'Street 1', 'Skopje', 'MK');
+
+-- Section
+INSERT INTO SECTIONS (warehouse_id, name, description)
+VALUES (1, 'Section A', 'Main section');
+
+-- Location
+INSERT INTO LOCATIONS (section_id, row_number, column_number, level_number, location_code)
+VALUES (1, 1, 1, 1, 'LOC-A-1');
+
+-- Bins
+INSERT INTO BINS (location_id, bin_code, capacity)
+VALUES
+    (1, 'BIN-A-1', 100),
+    (1, 'BIN-A-2', 100),
+    (1, 'BIN-B-1', 100);
+
+
+INSERT INTO EMPLOYEES (
+    employee_number,
+    first_name,
+    last_name,
+    email,
+    job_title,
+    employment_status,
+    hired_at
+)
+VALUES
+    ('E001','Alice','Manager','alice@company.com','Manager','ACTIVE',NOW()),
+    ('E002','Bob','Operator','bob@company.com','Worker','ACTIVE',NOW());
+
+INSERT INTO BRANDS (name)
+VALUES ('Acme'), ('Globex');
+
+INSERT INTO PRODUCTS (name, description)
+VALUES ('Laptop', 'Gaming laptop'),
+       ('Mouse', 'Wireless mouse');
+
+INSERT INTO PRODUCT_VARIANTS (product_id, sku, brand_id, barcode, price, weight, status)
+VALUES
+    (1, 'LAP-001', 1, '111111', 1200.00, 2.5, 'ACTIVE'),
+    (2, 'MOU-001', 2, '222222', 25.00, 0.2, 'ACTIVE');
+
+
+INSERT INTO INVENTORY (product_variant_id, bin_id, quantity, reserved_quantity, status)
+VALUES
+    (1, 1, 10, 0, 'AVAILABLE'),
+    (2, 1, 50, 0, 'AVAILABLE');
+
+
+DO $$
+    DECLARE v_tx BIGINT;
+    BEGIN
+        v_tx := receive_delivery(
+                'Supplier Inc',
+                'DN-001',
+                1,
+                ARRAY[
+                    ROW(1, NULL, 2, 5)::movement_item,
+                    ROW(2, NULL, 2, 10)::movement_item
+                    ]
+                );
+
+        RAISE NOTICE 'RECEIPT TX: %', v_tx;
+    END $$;
+
+DO $$
+    DECLARE v_tx BIGINT;
+    BEGIN
+        v_tx := ship_stock(
+                'Customer Berlin',
+                10001,
+                2,
+                ARRAY[
+                    ROW(1, 1, NULL, 3)::movement_item,
+                    ROW(2, 1, NULL, 5)::movement_item
+                    ]
+                );
+
+        RAISE NOTICE 'SHIPMENT TX: %', v_tx;
+    END $$;
+
+DO $$
+    BEGIN
+        call pack_shipment(
+                5,2
+                );
+
+    END $$;
+
+
+
+DO $$
+    DECLARE v_tx BIGINT;
+    BEGIN
+        v_tx := transfer_stock(
+                2,
+                ARRAY[
+                    ROW(1, 1, 3, 2)::movement_item
+                    ]
+                );
+
+        RAISE NOTICE 'TRANSFER TX: %', v_tx;
+    END $$;
+
+DO $$
+    DECLARE v_tx BIGINT;
+    BEGIN
+        v_tx := adjust_inventory(
+                1,
+                'Damage correction',
+                ARRAY[
+                    ROW(2, 1, -5)::adjustment_item,
+                    ROW(1, 1, 3)::adjustment_item
+                    ]
+                );
+
+        RAISE NOTICE 'ADJUSTMENT TX: %', v_tx;
+    END $$;
+
+DO $$
+    DECLARE r RECORD;
+    BEGIN
+        FOR r IN
+            SELECT id FROM INVENTORY_TRANSACTIONS WHERE status = 'PENDING' ORDER BY id
+            LOOP
+                CALL approve_inventory_transaction(r.id, 1);
+                RAISE NOTICE 'APPROVED TX %', r.id;
+            END LOOP;
+    END $$;
+
+DO $$
+    DECLARE r RECORD;
+    BEGIN
+        SELECT id INTO r
+        FROM INVENTORY_TRANSACTIONS
+        WHERE status = 'PENDING'
+        ORDER BY id DESC
+        LIMIT 1;
+
+        IF r.id IS NOT NULL THEN
+            CALL cancel_pending_transaction(r.id, 2);
+            RAISE NOTICE 'CANCELLED TX %', r.id;
+        END IF;
+    END $$;
+
+SELECT * FROM INVENTORY ORDER BY product_variant_id, bin_id;
+
+SELECT * FROM INVENTORY_TRANSACTIONS ORDER BY id;
+
+SELECT * FROM INVENTORY_MOVEMENTS ORDER BY id;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 -- =============================================================================
 -- SAMPLE USAGE OF ALL PROCEDURES & FUNCTIONS (using dummy data)
 -- =============================================================================

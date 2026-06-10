@@ -69,6 +69,208 @@ CREATE TRIGGER trg_inventory_updated_at
     ON INVENTORY
     FOR EACH ROW
 EXECUTE FUNCTION update_timestamp();
+
+-- =============================================================================
+-- Creation Functions (pending, with stock reservation)
+-- =============================================================================
+
+-- a. Receive a delivery (no reservation)
+CREATE OR REPLACE FUNCTION receive_delivery(
+    p_supplier_company TEXT,
+    p_delivery_note TEXT,
+    p_created_by_employee BIGINT,
+    p_items movement_item[]
+)
+    RETURNS BIGINT AS
+$$
+DECLARE
+    v_transaction_id BIGINT;
+    item             movement_item;
+BEGIN
+    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes, status)
+    VALUES ('RECEIPT', p_created_by_employee, 'Delivery receipt', 'PENDING')
+    RETURNING id INTO v_transaction_id;
+
+    INSERT INTO DELIVERY_TRANSACTIONS (inventory_transactions_id, supplier_company, delivery_note)
+    VALUES (v_transaction_id, p_supplier_company, p_delivery_note);
+
+    FOREACH item IN ARRAY p_items
+        LOOP
+            IF item.from_bin_id IS NOT NULL OR item.to_bin_id IS NULL THEN
+                RAISE EXCEPTION 'Invalid delivery item: from_bin_id must be NULL and to_bin_id must be set';
+            END IF;
+            INSERT INTO INVENTORY_MOVEMENTS (product_variant_id, from_bin_id, to_bin_id, quantity,
+                                             inventory_transactions_id)
+            VALUES (item.product_variant_id, NULL, item.to_bin_id, item.quantity, v_transaction_id);
+        END LOOP;
+
+    RETURN v_transaction_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- b. Ship stock (reserve from source bin)
+CREATE OR REPLACE FUNCTION ship_stock(
+    p_destination_address TEXT,
+    p_shipment_number BIGINT,
+    p_created_by_employee BIGINT,
+    p_items movement_item[]
+)
+    RETURNS BIGINT AS
+$$
+DECLARE
+    v_transaction_id BIGINT;
+    item             movement_item;
+    v_available      INT;
+BEGIN
+    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes, status)
+    VALUES ('SHIPMENT', p_created_by_employee, 'Customer shipment', 'PENDING')
+    RETURNING id INTO v_transaction_id;
+
+    INSERT INTO SHIPMENT_TRANSACTIONS (inventory_transactions_id, destination_adress, shipment_number)
+    VALUES (v_transaction_id, p_destination_address, p_shipment_number);
+
+    FOREACH item IN ARRAY p_items
+        LOOP
+            IF item.from_bin_id IS NULL OR item.to_bin_id IS NOT NULL THEN
+                RAISE EXCEPTION 'Invalid shipment item: from_bin_id must be set and to_bin_id must be NULL';
+            END IF;
+
+            UPDATE INVENTORY
+            SET reserved_quantity = reserved_quantity + item.quantity,
+                updated_at        = CURRENT_TIMESTAMP
+            WHERE product_variant_id = item.product_variant_id
+              AND bin_id = item.from_bin_id
+              AND (quantity - reserved_quantity) >= item.quantity
+            RETURNING (quantity - reserved_quantity + item.quantity) INTO v_available;
+
+            IF NOT FOUND THEN
+                RAISE EXCEPTION 'Insufficient stock for variant % in bin % (need %)',
+                    item.product_variant_id, item.from_bin_id, item.quantity;
+            END IF;
+
+            INSERT INTO INVENTORY_MOVEMENTS (product_variant_id, from_bin_id, to_bin_id, quantity,
+                                             inventory_transactions_id)
+            VALUES (item.product_variant_id, item.from_bin_id, NULL, item.quantity, v_transaction_id);
+        END LOOP;
+
+    RETURN v_transaction_id;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE PROCEDURE pack_shipment(
+    p_transaction_id BIGINT,
+    p_packed_by_employee BIGINT
+)
+    LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE INVENTORY_TRANSACTIONS
+    SET packed_by = p_packed_by_employee,
+        last_updated_by = p_packed_by_employee
+    WHERE id = p_transaction_id
+      AND transaction_type = 'SHIPMENT'
+      AND status = 'PENDING';
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Shipment % not found or not pending', p_transaction_id;
+    END IF;
+END;
+$$;
+
+-- c. Internal transfer (reserve from source bin)
+CREATE OR REPLACE FUNCTION transfer_stock(
+    p_created_by_employee BIGINT,
+    p_items movement_item[]
+)
+    RETURNS BIGINT AS
+$$
+DECLARE
+    v_transaction_id BIGINT;
+    item             movement_item;
+    v_available      INT;
+BEGIN
+    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes, status)
+    VALUES ('TRANSFER', p_created_by_employee, 'Internal transfer', 'PENDING')
+    RETURNING id INTO v_transaction_id;
+
+    FOREACH item IN ARRAY p_items
+        LOOP
+            IF item.from_bin_id IS NULL OR item.to_bin_id IS NULL THEN
+                RAISE EXCEPTION 'Invalid transfer item: both from_bin_id and to_bin_id must be set';
+            END IF;
+
+            UPDATE INVENTORY
+            SET reserved_quantity = reserved_quantity + item.quantity,
+                updated_at        = CURRENT_TIMESTAMP
+            WHERE product_variant_id = item.product_variant_id
+              AND bin_id = item.from_bin_id
+              AND (quantity - reserved_quantity) >= item.quantity
+            RETURNING (quantity - reserved_quantity + item.quantity) INTO v_available;
+
+            IF NOT FOUND THEN
+                RAISE EXCEPTION 'Insufficient stock for variant % in bin % (need %)',
+                    item.product_variant_id, item.from_bin_id, item.quantity;
+            END IF;
+
+            INSERT INTO INVENTORY_MOVEMENTS (product_variant_id, from_bin_id, to_bin_id, quantity,
+                                             inventory_transactions_id)
+            VALUES (item.product_variant_id, item.from_bin_id, item.to_bin_id, item.quantity, v_transaction_id);
+        END LOOP;
+
+    RETURN v_transaction_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- d. Manual inventory adjustment (reserve for negative changes)
+CREATE OR REPLACE FUNCTION adjust_inventory(
+    p_created_by_employee BIGINT,
+    p_notes TEXT,
+    p_items adjustment_item[]
+)
+    RETURNS BIGINT AS
+$$
+DECLARE
+    v_transaction_id BIGINT;
+    item             adjustment_item;
+    v_available      INT;
+BEGIN
+    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes, status)
+    VALUES ('ADJUSTMENT', p_created_by_employee, p_notes, 'PENDING')
+    RETURNING id INTO v_transaction_id;
+
+    FOREACH item IN ARRAY p_items
+        LOOP
+            IF item.quantity_change > 0 THEN
+                INSERT INTO INVENTORY_MOVEMENTS (product_variant_id, from_bin_id, to_bin_id, quantity,
+                                                 inventory_transactions_id)
+                VALUES (item.product_variant_id, NULL, item.bin_id, item.quantity_change, v_transaction_id);
+            ELSIF item.quantity_change < 0 THEN
+                UPDATE INVENTORY
+                SET reserved_quantity = reserved_quantity + ABS(item.quantity_change),
+                    updated_at        = CURRENT_TIMESTAMP
+                WHERE product_variant_id = item.product_variant_id
+                  AND bin_id = item.bin_id
+                  AND (quantity - reserved_quantity) >= ABS(item.quantity_change)
+                RETURNING (quantity - reserved_quantity + ABS(item.quantity_change)) INTO v_available;
+
+                IF NOT FOUND THEN
+                    RAISE EXCEPTION 'Insufficient stock for variant % in bin % (need %)',
+                        item.product_variant_id, item.bin_id, ABS(item.quantity_change);
+                END IF;
+
+                INSERT INTO INVENTORY_MOVEMENTS (product_variant_id, from_bin_id, to_bin_id, quantity,
+                                                 inventory_transactions_id)
+                VALUES (item.product_variant_id, item.bin_id, NULL, ABS(item.quantity_change), v_transaction_id);
+            ELSE
+                RAISE NOTICE 'Zero adjustment ignored for variant % in bin %', item.product_variant_id, item.bin_id;
+            END IF;
+        END LOOP;
+
+    RETURN v_transaction_id;
+END;
+$$ LANGUAGE plpgsql;
+
 -- =============================================================================
 -- Approval Procedure (consumes reserved stock)
 -- =============================================================================
@@ -181,185 +383,7 @@ BEGIN
 END;
 $$;
 
--- =============================================================================
--- Creation Functions (pending, with stock reservation)
--- =============================================================================
 
--- a. Receive a delivery (no reservation)
-CREATE OR REPLACE FUNCTION receive_delivery(
-    p_supplier_company TEXT,
-    p_delivery_note TEXT,
-    p_created_by_employee BIGINT,
-    p_items movement_item[]
-)
-    RETURNS BIGINT AS
-$$
-DECLARE
-    v_transaction_id BIGINT;
-    item             movement_item;
-BEGIN
-    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes, status)
-    VALUES ('RECEIPT', p_created_by_employee, 'Delivery receipt', 'PENDING')
-    RETURNING id INTO v_transaction_id;
-
-    INSERT INTO DELIVERY_TRANSACTIONS (inventory_transactions_id, supplier_company, delivery_note)
-    VALUES (v_transaction_id, p_supplier_company, p_delivery_note);
-
-    FOREACH item IN ARRAY p_items
-        LOOP
-            IF item.from_bin_id IS NOT NULL OR item.to_bin_id IS NULL THEN
-                RAISE EXCEPTION 'Invalid delivery item: from_bin_id must be NULL and to_bin_id must be set';
-            END IF;
-            INSERT INTO INVENTORY_MOVEMENTS (product_variant_id, from_bin_id, to_bin_id, quantity,
-                                             inventory_transactions_id)
-            VALUES (item.product_variant_id, NULL, item.to_bin_id, item.quantity, v_transaction_id);
-        END LOOP;
-
-    RETURN v_transaction_id;
-END;
-$$ LANGUAGE plpgsql;
-
--- b. Ship stock (reserve from source bin)
-CREATE OR REPLACE FUNCTION ship_stock(
-    p_destination_address TEXT,
-    p_shipment_number BIGINT,
-    p_created_by_employee BIGINT,
-    p_items movement_item[]
-)
-    RETURNS BIGINT AS
-$$
-DECLARE
-    v_transaction_id BIGINT;
-    item             movement_item;
-    v_available      INT;
-BEGIN
-    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes, status)
-    VALUES ('SHIPMENT', p_created_by_employee, 'Customer shipment', 'PENDING')
-    RETURNING id INTO v_transaction_id;
-
-    INSERT INTO SHIPMENT_TRANSACTIONS (inventory_transactions_id, destination_adress, shipment_number)
-    VALUES (v_transaction_id, p_destination_address, p_shipment_number);
-
-    FOREACH item IN ARRAY p_items
-        LOOP
-            IF item.from_bin_id IS NULL OR item.to_bin_id IS NOT NULL THEN
-                RAISE EXCEPTION 'Invalid shipment item: from_bin_id must be set and to_bin_id must be NULL';
-            END IF;
-
-            UPDATE INVENTORY
-            SET reserved_quantity = reserved_quantity + item.quantity,
-                updated_at        = CURRENT_TIMESTAMP
-            WHERE product_variant_id = item.product_variant_id
-              AND bin_id = item.from_bin_id
-              AND (quantity - reserved_quantity) >= item.quantity
-            RETURNING (quantity - reserved_quantity + item.quantity) INTO v_available;
-
-            IF NOT FOUND THEN
-                RAISE EXCEPTION 'Insufficient stock for variant % in bin % (need %)',
-                    item.product_variant_id, item.from_bin_id, item.quantity;
-            END IF;
-
-            INSERT INTO INVENTORY_MOVEMENTS (product_variant_id, from_bin_id, to_bin_id, quantity,
-                                             inventory_transactions_id)
-            VALUES (item.product_variant_id, item.from_bin_id, NULL, item.quantity, v_transaction_id);
-        END LOOP;
-
-    RETURN v_transaction_id;
-END;
-$$ LANGUAGE plpgsql;
-
--- c. Internal transfer (reserve from source bin)
-CREATE OR REPLACE FUNCTION transfer_stock(
-    p_created_by_employee BIGINT,
-    p_items movement_item[]
-)
-    RETURNS BIGINT AS
-$$
-DECLARE
-    v_transaction_id BIGINT;
-    item             movement_item;
-    v_available      INT;
-BEGIN
-    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes, status)
-    VALUES ('TRANSFER', p_created_by_employee, 'Internal transfer', 'PENDING')
-    RETURNING id INTO v_transaction_id;
-
-    FOREACH item IN ARRAY p_items
-        LOOP
-            IF item.from_bin_id IS NULL OR item.to_bin_id IS NULL THEN
-                RAISE EXCEPTION 'Invalid transfer item: both from_bin_id and to_bin_id must be set';
-            END IF;
-
-            UPDATE INVENTORY
-            SET reserved_quantity = reserved_quantity + item.quantity,
-                updated_at        = CURRENT_TIMESTAMP
-            WHERE product_variant_id = item.product_variant_id
-              AND bin_id = item.from_bin_id
-              AND (quantity - reserved_quantity) >= item.quantity
-            RETURNING (quantity - reserved_quantity + item.quantity) INTO v_available;
-
-            IF NOT FOUND THEN
-                RAISE EXCEPTION 'Insufficient stock for variant % in bin % (need %)',
-                    item.product_variant_id, item.from_bin_id, item.quantity;
-            END IF;
-
-            INSERT INTO INVENTORY_MOVEMENTS (product_variant_id, from_bin_id, to_bin_id, quantity,
-                                             inventory_transactions_id)
-            VALUES (item.product_variant_id, item.from_bin_id, item.to_bin_id, item.quantity, v_transaction_id);
-        END LOOP;
-
-    RETURN v_transaction_id;
-END;
-$$ LANGUAGE plpgsql;
-
--- d. Manual inventory adjustment (reserve for negative changes)
-CREATE OR REPLACE FUNCTION adjust_inventory(
-    p_created_by_employee BIGINT,
-    p_notes TEXT,
-    p_items adjustment_item[]
-)
-    RETURNS BIGINT AS
-$$
-DECLARE
-    v_transaction_id BIGINT;
-    item             adjustment_item;
-    v_available      INT;
-BEGIN
-    INSERT INTO INVENTORY_TRANSACTIONS (transaction_type, created_by_employee, notes, status)
-    VALUES ('ADJUSTMENT', p_created_by_employee, p_notes, 'PENDING')
-    RETURNING id INTO v_transaction_id;
-
-    FOREACH item IN ARRAY p_items
-        LOOP
-            IF item.quantity_change > 0 THEN
-                INSERT INTO INVENTORY_MOVEMENTS (product_variant_id, from_bin_id, to_bin_id, quantity,
-                                                 inventory_transactions_id)
-                VALUES (item.product_variant_id, NULL, item.bin_id, item.quantity_change, v_transaction_id);
-            ELSIF item.quantity_change < 0 THEN
-                UPDATE INVENTORY
-                SET reserved_quantity = reserved_quantity + ABS(item.quantity_change),
-                    updated_at        = CURRENT_TIMESTAMP
-                WHERE product_variant_id = item.product_variant_id
-                  AND bin_id = item.bin_id
-                  AND (quantity - reserved_quantity) >= ABS(item.quantity_change)
-                RETURNING (quantity - reserved_quantity + ABS(item.quantity_change)) INTO v_available;
-
-                IF NOT FOUND THEN
-                    RAISE EXCEPTION 'Insufficient stock for variant % in bin % (need %)',
-                        item.product_variant_id, item.bin_id, ABS(item.quantity_change);
-                END IF;
-
-                INSERT INTO INVENTORY_MOVEMENTS (product_variant_id, from_bin_id, to_bin_id, quantity,
-                                                 inventory_transactions_id)
-                VALUES (item.product_variant_id, item.bin_id, NULL, ABS(item.quantity_change), v_transaction_id);
-            ELSE
-                RAISE NOTICE 'Zero adjustment ignored for variant % in bin %', item.product_variant_id, item.bin_id;
-            END IF;
-        END LOOP;
-
-    RETURN v_transaction_id;
-END;
-$$ LANGUAGE plpgsql;
 
 -- =============================================================================
 --  Product Catalog
