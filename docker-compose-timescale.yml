@@ -1,0 +1,19 @@
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg18
+    container_name: my-timescaledb-advanced
+    restart: always
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: time_admin
+      POSTGRES_PASSWORD: time_admin
+      POSTGRES_DB: timescale_data
+    ports:
+      - "5433:5432" # Map to port 5433 to avoid conflict with your main DB
+    volumes:
+      - timescale_data:/var/lib/postgresql
+      - ./scripts:/scripts
+
+volumes:
+  timescale_data:
